@@ -40,11 +40,10 @@ public final class ShooterIOReal implements ShooterIO {
     shootOne = new TalonFX(configuration.shootOneCanId(), canBus);
     shootTwo = new TalonFX(configuration.shootTwoCanId(), canBus);
     motors = List.of(shootOne, shootTwo);
-    ;
 
     // TODO: Check the motor's Direction
-    configureMotor(shootOne, InvertedValue.CounterClockwise_Positive);
-    configureMotor(shootTwo, InvertedValue.Clockwise_Positive);
+    configureMotor(shootOne, InvertedValue.Clockwise_Positive);
+    configureMotor(shootTwo, InvertedValue.CounterClockwise_Positive);
   }
 
   private void configureMotor(TalonFX motor, InvertedValue invertDirection) {
