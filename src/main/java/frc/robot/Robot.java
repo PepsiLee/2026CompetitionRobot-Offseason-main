@@ -134,5 +134,6 @@ public class Robot extends LoggedRobot {
           "FieldSimulation/Fuel",
           SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
     }
-  }
+
+  } 
 }

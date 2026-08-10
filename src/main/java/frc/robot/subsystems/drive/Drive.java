@@ -21,7 +21,10 @@ import frc.robot.simulation.MapleSimSwerveDrivetrain;
 import java.util.Optional;
 import org.littletonrobotics.junction.Logger;
 
-/** Driver-facing swerve subsystem with mutually exclusive teleop, aim, and auto modes. */
+/**
+ * Driver-facing swerve subsystem with mutually exclusive teleop, aim, and auto
+ * modes.
+ */
 public final class Drive extends SubsystemBase {
   public enum ControlMode {
     TELEOP,
@@ -31,13 +34,16 @@ public final class Drive extends SubsystemBase {
     STOPPED
   }
 
+  // TODO: move this field to the constant file
   private static final double JOYSTICK_DEADBAND = 0.10;
   private static final double TELEOP_TRANSLATION_SCALE = 0.4;
   private static final double TELEOP_ROTATION_SCALE = 0.2;
   private static final double SETPOINT_STABLE_TIME_SECONDS = 0.10;
 
+  // Why there is a robot state here?
   private final RobotState robotState;
   private final DriveIO io;
+  // ?
   private final DriveIO.DriveIOInputs inputs = new DriveIO.DriveIOInputs();
   private final Field2d field = new Field2d();
   private final double maxLinearSpeedMetersPerSecond;
@@ -45,8 +51,8 @@ public final class Drive extends SubsystemBase {
   private final PIDController xController = new PIDController(2.5, 0.0, 0.05);
   private final PIDController yController = new PIDController(2.5, 0.0, 0.05);
   private final ProfiledPIDController headingController;
-  private final Debouncer driveToPoseDebouncer =
-      new Debouncer(SETPOINT_STABLE_TIME_SECONDS, Debouncer.DebounceType.kRising);
+  private final Debouncer driveToPoseDebouncer = new Debouncer(SETPOINT_STABLE_TIME_SECONDS,
+      Debouncer.DebounceType.kRising);
 
   private ControlMode controlMode = ControlMode.TELEOP;
   private double teleopXInput;
@@ -65,14 +71,13 @@ public final class Drive extends SubsystemBase {
     maxLinearSpeedMetersPerSecond = configuration.maxLinearSpeedMetersPerSecond();
     maxAngularSpeedRadiansPerSecond = configuration.maxAngularSpeedRadiansPerSecond();
     driveToPoseMaxSpeedMetersPerSecond = maxLinearSpeedMetersPerSecond;
-    headingController =
-        new ProfiledPIDController(
-            5.0,
-            0.0,
-            0.25,
-            new TrapezoidProfile.Constraints(
-                Math.min(maxAngularSpeedRadiansPerSecond, 6.0),
-                Math.min(maxAngularSpeedRadiansPerSecond * 2.0, 12.0)));
+    headingController = new ProfiledPIDController(
+        5.0,
+        0.0,
+        0.25,
+        new TrapezoidProfile.Constraints(
+            Math.min(maxAngularSpeedRadiansPerSecond, 6.0),
+            Math.min(maxAngularSpeedRadiansPerSecond * 2.0, 12.0)));
     headingController.enableContinuousInput(-Math.PI, Math.PI);
   }
 
@@ -98,7 +103,10 @@ public final class Drive extends SubsystemBase {
     Logger.recordOutput("Drive/HeadingErrorRadians", getHeadingErrorRadians(targetHeading));
   }
 
-  /** Stores driver input; the periodic control-mode switch is the only writer to DriveIO. */
+  /**
+   * Stores driver input; the periodic control-mode switch is the only writer to
+   * DriveIO.
+   */
   public void acceptTeleopInput(double xInput, double yInput, double omegaInput) {
     teleopXInput = xInput;
     teleopYInput = yInput;
@@ -133,8 +141,7 @@ public final class Drive extends SubsystemBase {
       double headingToleranceRadians) {
     targetPose = pose;
     targetHeading = pose.getRotation();
-    driveToPoseMaxSpeedMetersPerSecond =
-        MathUtil.clamp(maxSpeedMetersPerSecond, 0.0, maxLinearSpeedMetersPerSecond);
+    driveToPoseMaxSpeedMetersPerSecond = MathUtil.clamp(maxSpeedMetersPerSecond, 0.0, maxLinearSpeedMetersPerSecond);
     driveToPosePositionToleranceMeters = positionToleranceMeters;
     driveToPoseHeadingToleranceRadians = headingToleranceRadians;
     xController.reset();
@@ -146,13 +153,15 @@ public final class Drive extends SubsystemBase {
     controlMode = ControlMode.DRIVE_TO_POSE;
   }
 
-  /** Stores BLine's robot-relative request; Drive.periodic remains the only DriveIO writer. */
+  /**
+   * Stores BLine's robot-relative request; Drive.periodic remains the only
+   * DriveIO writer.
+   */
   public void requestBLineSpeeds(ChassisSpeeds robotRelativeSpeeds) {
-    blineRequestedRobotRelativeSpeeds =
-        new ChassisSpeeds(
-            robotRelativeSpeeds.vxMetersPerSecond,
-            robotRelativeSpeeds.vyMetersPerSecond,
-            robotRelativeSpeeds.omegaRadiansPerSecond);
+    blineRequestedRobotRelativeSpeeds = new ChassisSpeeds(
+        robotRelativeSpeeds.vxMetersPerSecond,
+        robotRelativeSpeeds.vyMetersPerSecond,
+        robotRelativeSpeeds.omegaRadiansPerSecond);
     controlMode = ControlMode.BLINE_PATH;
   }
 
@@ -165,11 +174,9 @@ public final class Drive extends SubsystemBase {
   }
 
   public boolean isAtDriveToPoseSetpoint() {
-    boolean rawAtSetpoint =
-        inputs.pose.getTranslation().getDistance(targetPose.getTranslation())
-                <= driveToPosePositionToleranceMeters
-            && Math.abs(getHeadingErrorRadians(targetPose.getRotation()))
-                <= driveToPoseHeadingToleranceRadians;
+    boolean rawAtSetpoint = inputs.pose.getTranslation()
+        .getDistance(targetPose.getTranslation()) <= driveToPosePositionToleranceMeters
+        && Math.abs(getHeadingErrorRadians(targetPose.getRotation())) <= driveToPoseHeadingToleranceRadians;
     return driveToPoseDebouncer.calculate(rawAtSetpoint);
   }
 
@@ -199,10 +206,9 @@ public final class Drive extends SubsystemBase {
   }
 
   public void resetHeadingForAlliance() {
-    Rotation2d heading =
-        DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red
-            ? Rotation2d.k180deg
-            : Rotation2d.kZero;
+    Rotation2d heading = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red
+        ? Rotation2d.k180deg
+        : Rotation2d.kZero;
     resetPose(new Pose2d(getPose().getTranslation(), heading));
   }
 
@@ -235,14 +241,12 @@ public final class Drive extends SubsystemBase {
     switch (controlMode) {
       case TELEOP -> io.runVelocity(calculateTeleopSpeeds());
       case AIM_STATIONARY -> {
-        double omega =
-            headingController.calculate(
-                inputs.pose.getRotation().getRadians(), targetHeading.getRadians());
-        omega =
-            MathUtil.clamp(
-                omega,
-                -maxAngularSpeedRadiansPerSecond,
-                maxAngularSpeedRadiansPerSecond);
+        double omega = headingController.calculate(
+            inputs.pose.getRotation().getRadians(), targetHeading.getRadians());
+        omega = MathUtil.clamp(
+            omega,
+            -maxAngularSpeedRadiansPerSecond,
+            maxAngularSpeedRadiansPerSecond);
         io.runVelocity(new ChassisSpeeds(0.0, 0.0, omega));
       }
       case DRIVE_TO_POSE -> io.runVelocity(calculateDriveToPoseSpeeds());
@@ -273,14 +277,12 @@ public final class Drive extends SubsystemBase {
     double x = shapeJoystick(teleopXInput);
     double y = shapeJoystick(teleopYInput);
     double omega = shapeJoystick(teleopOmegaInput);
-    double allianceMultiplier =
-        DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red ? -1.0 : 1.0;
+    double allianceMultiplier = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red ? -1.0 : 1.0;
 
-    var fieldRelativeSpeeds =
-        new ChassisSpeeds(
-            x * maxLinearSpeedMetersPerSecond * TELEOP_TRANSLATION_SCALE * allianceMultiplier,
-            y * maxLinearSpeedMetersPerSecond * TELEOP_TRANSLATION_SCALE * allianceMultiplier,
-            omega * maxAngularSpeedRadiansPerSecond * TELEOP_ROTATION_SCALE);
+    var fieldRelativeSpeeds = new ChassisSpeeds(
+        x * maxLinearSpeedMetersPerSecond * TELEOP_TRANSLATION_SCALE * allianceMultiplier,
+        y * maxLinearSpeedMetersPerSecond * TELEOP_TRANSLATION_SCALE * allianceMultiplier,
+        omega * maxAngularSpeedRadiansPerSecond * TELEOP_ROTATION_SCALE);
     return ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, inputs.pose.getRotation());
   }
 
@@ -293,14 +295,12 @@ public final class Drive extends SubsystemBase {
       vx *= scalar;
       vy *= scalar;
     }
-    double omega =
-        headingController.calculate(
-            inputs.pose.getRotation().getRadians(), targetPose.getRotation().getRadians());
-    omega =
-        MathUtil.clamp(
-            omega,
-            -maxAngularSpeedRadiansPerSecond,
-            maxAngularSpeedRadiansPerSecond);
+    double omega = headingController.calculate(
+        inputs.pose.getRotation().getRadians(), targetPose.getRotation().getRadians());
+    omega = MathUtil.clamp(
+        omega,
+        -maxAngularSpeedRadiansPerSecond,
+        maxAngularSpeedRadiansPerSecond);
     return ChassisSpeeds.fromFieldRelativeSpeeds(
         new ChassisSpeeds(vx, vy, omega), inputs.pose.getRotation());
   }

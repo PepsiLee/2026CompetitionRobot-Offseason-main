@@ -7,6 +7,7 @@ import static edu.wpi.first.units.Units.Seconds;
 import com.ctre.phoenix6.Utils;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
@@ -19,7 +20,10 @@ import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import org.littletonrobotics.junction.Logger;
 
-/** Simulation drive IO supporting either CTRE simulation or Maple-Sim, matching 2910's split. */
+/**
+ * Simulation drive IO supporting either CTRE simulation or Maple-Sim, matching
+ * 2910's split.
+ */
 public final class DriveIOSim extends DriveIOReal {
   private static final double SIMULATION_PERIOD_SECONDS = 0.005;
   private static final double ROBOT_MASS_POUNDS = 150.0;
@@ -34,7 +38,7 @@ public final class DriveIOSim extends DriveIOReal {
   private RobotBumpSim robotBumpSim;
 
   @SuppressWarnings("unused")
-  //wpi 
+  // wpi
   private Notifier simulationNotifier;
 
   private double lastSimulationTime;
@@ -49,35 +53,34 @@ public final class DriveIOSim extends DriveIOReal {
 
   private void startSimulationThread() {
     if (Constants.useMapleSim) {
-      // The stock arena makes the complete BUMP region an impassable rectangle. Keep the HUB
+      // The stock arena makes the complete BUMP region an impassable rectangle. Keep
+      // the HUB
       // collider, but let RobotBumpSim model the BUMP surfaces and traversal instead.
       SimulatedArena.overrideInstance(new Arena2026Rebuilt(false));
 
-      mapleSimSwerveDrivetrain =
-          new MapleSimSwerveDrivetrain(
-              Seconds.of(SIMULATION_PERIOD_SECONDS),
-              Pounds.of(ROBOT_MASS_POUNDS),
-              Inches.of(BUMPER_LENGTH_INCHES),
-              Inches.of(BUMPER_WIDTH_INCHES),
-              DCMotor.getKrakenX60(1),
-              DCMotor.getKrakenX60(1),
-              1.2,
-              getModuleLocations(),
-              getPigeon2(),
-              getModules(),
-              configuration.moduleConstants());
+      mapleSimSwerveDrivetrain = new MapleSimSwerveDrivetrain(
+          Seconds.of(SIMULATION_PERIOD_SECONDS),
+          Pounds.of(ROBOT_MASS_POUNDS),
+          Inches.of(BUMPER_LENGTH_INCHES),
+          Inches.of(BUMPER_WIDTH_INCHES),
+          DCMotor.getKrakenX60(1),
+          DCMotor.getKrakenX60(1),
+          1.2,
+          getModuleLocations(),
+          getPigeon2(),
+          getModules(),
+          configuration.moduleConstants());
       robotBumpSim = new RobotBumpSim(getModuleLocations());
       simulationNotifier = new Notifier(mapleSimSwerveDrivetrain::update);
     } else {
       lastSimulationTime = Utils.getCurrentTimeSeconds();
-      simulationNotifier =
-          new Notifier(
-              () -> {
-                double currentTime = Utils.getCurrentTimeSeconds();
-                double deltaTime = currentTime - lastSimulationTime;
-                lastSimulationTime = currentTime;
-                updateSimState(deltaTime, RobotController.getBatteryVoltage());
-              });
+      simulationNotifier = new Notifier(
+          () -> {
+            double currentTime = Utils.getCurrentTimeSeconds();
+            double deltaTime = currentTime - lastSimulationTime;
+            lastSimulationTime = currentTime;
+            updateSimState(deltaTime, RobotController.getBatteryVoltage());
+          });
     }
 
     simulationNotifier.setName("Drive Simulation");
@@ -89,13 +92,10 @@ public final class DriveIOSim extends DriveIOReal {
     super.updateInputs(inputs);
 
     if (Constants.useMapleSim && mapleSimSwerveDrivetrain != null) {
-      Pose2d maplePose =
-          mapleSimSwerveDrivetrain.mapleSimDrive.getSimulatedDriveTrainPose();
-      var fieldRelativeSpeeds =
-          mapleSimSwerveDrivetrain.mapleSimDrive
-              .getDriveTrainSimulatedChassisSpeedsFieldRelative();
-      var simulatedPose3d =
-          robotBumpSim.update(maplePose, fieldRelativeSpeeds, BUMP_SIMULATION_SUBTICKS);
+      Pose2d maplePose = mapleSimSwerveDrivetrain.mapleSimDrive.getSimulatedDriveTrainPose();
+      var fieldRelativeSpeeds = mapleSimSwerveDrivetrain.mapleSimDrive
+          .getDriveTrainSimulatedChassisSpeedsFieldRelative();
+      var simulatedPose3d = robotBumpSim.update(maplePose, fieldRelativeSpeeds, BUMP_SIMULATION_SUBTICKS);
 
       if (robotBumpSim.isOnRamp()) {
         maplePose = robotBumpSim.getSimWorldPose(maplePose);
@@ -103,6 +103,10 @@ public final class DriveIOSim extends DriveIOReal {
       }
 
       simulatedRobotState.addFieldToRobot(maplePose);
+
+      Logger.recordOutput(
+          "FieldSimulation/Fuel",
+          SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
       Logger.recordOutput("Drive/Viz/SimPose", simulatedRobotState.getLatestFieldToRobot());
       Logger.recordOutput("Drive/Viz/SimPose3d", simulatedPose3d);
       Logger.recordOutput("Drive/Viz/IsOnBump", robotBumpSim.isOnRamp());

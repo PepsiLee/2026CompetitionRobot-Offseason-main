@@ -19,7 +19,7 @@ import edu.wpi.first.math.numbers.N3;
 import frc.robot.config.DriveConfiguration;
 import java.util.Optional;
 
-/** CTRE Phoenix implementation used only on the roboRIO. */
+/// CTRE Powered swerve drivertrain.
 public class DriveIOReal extends SwerveDrivetrain<TalonFX, TalonFX, CANcoder>
     implements DriveIO {
   private final SwerveRequest.ApplyRobotSpeeds velocityRequest =

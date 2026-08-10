@@ -5,7 +5,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 /** Camera boundary. Pose-estimator filtering belongs in Vision, not the Limelight adapter. */
 public interface VisionIO {
   class Inputs {
-    public boolean connected;
+    public double heartbeat;
     public boolean hasTargets;
     public Pose2d estimatedPose = Pose2d.kZero;
     public double timestampSeconds = Double.NaN;

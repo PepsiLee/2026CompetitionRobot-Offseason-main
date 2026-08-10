@@ -21,6 +21,7 @@ import frc.robot.config.ShooterConfiguration;
 import frc.robot.subsystems.SuperStructure;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
+import frc.robot.subsystems.feeder.Feeder;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeIO;
 import frc.robot.subsystems.shooter.Shooter;
@@ -73,7 +74,8 @@ class AutoFactorySimulationTest {
     shooterIO.poseSupplier = () -> driveIO.pose;
     ShooterConfiguration shooterConfiguration = shooterConfiguration();
     Shooter shooter = new Shooter(shooterIO, shooterConfiguration);
-    SuperStructure superStructure = new SuperStructure(drive, robotState, intake, shooter);
+    Feeder feeder = new Feeder(null, null);
+    SuperStructure superStructure = new SuperStructure(drive, robotState, intake, shooter, feeder);
     blinePathTimeoutSeconds = 12.0;
     autoFactory =
         new AutoFactory(
@@ -238,7 +240,7 @@ class AutoFactorySimulationTest {
 
   private static ShooterConfiguration shooterConfiguration() {
     return new ShooterConfiguration(
-        "", 30, 31, 32, -7.0, 7.0, 7.0, 1.0, 35.0, 60.0);
+        "", 30, 31, -7.0, 7.0, 7.0, 1.0, 35.0, 60.0);
   }
 
   private static final class FakeDriveIO implements DriveIO {

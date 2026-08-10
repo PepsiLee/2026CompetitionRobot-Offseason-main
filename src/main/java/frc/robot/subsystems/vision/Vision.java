@@ -11,8 +11,12 @@ import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Drive;
 import org.littletonrobotics.junction.Logger;
 
-/** Filters MegaTag2 observations before adding them to CTRE's latency-aware pose estimator. */
+/**
+ * Filters MegaTag2 observations before adding them to CTRE's latency-aware pose
+ * estimator.
+ */
 public final class Vision extends SubsystemBase {
+
   public enum RejectionReason {
     ACCEPTED,
     NO_TAGS,
@@ -46,18 +50,19 @@ public final class Vision extends SubsystemBase {
   @Override
   public void periodic() {
     double yawDegrees = robotState.getPose().getRotation().getDegrees();
-    double yawRateDegreesPerSecond =
-        Units.radiansToDegrees(drive.getAngularVelocityRadiansPerSecond());
+    double yawRateDegreesPerSecond = Units.radiansToDegrees(drive.getAngularVelocityRadiansPerSecond());
+
     io.setRobotOrientation(yawDegrees, yawRateDegreesPerSecond);
     io.updateInputs(inputs);
 
-    VisionMeasurement measurement =
-        new VisionMeasurement(
-            inputs.estimatedPose,
-            inputs.timestampSeconds,
-            inputs.tagCount,
-            inputs.averageDistanceMeters);
+    VisionMeasurement measurement = new VisionMeasurement(
+        inputs.estimatedPose,
+        inputs.timestampSeconds,
+        inputs.tagCount,
+        inputs.averageDistanceMeters);
+
     lastRejectionReason = evaluate(measurement, yawRateDegreesPerSecond);
+
     if (lastRejectionReason == RejectionReason.ACCEPTED) {
       double xyStandardDeviation = calculateXyStandardDeviation(measurement);
       drive.addVisionMeasurement(
@@ -70,23 +75,20 @@ public final class Vision extends SubsystemBase {
       Logger.recordOutput("Vision/XYStandardDeviation", xyStandardDeviation);
     }
 
-    Logger.recordOutput("Vision/Connected", inputs.connected);
+    Logger.recordOutput("Vision/Heartbeat", inputs.heartbeat);
     Logger.recordOutput("Vision/HasTargets", inputs.hasTargets);
     Logger.recordOutput("Vision/EstimatedPose", inputs.estimatedPose);
     Logger.recordOutput("Vision/TagCount", inputs.tagCount);
     Logger.recordOutput("Vision/AverageDistanceMeters", inputs.averageDistanceMeters);
     Logger.recordOutput("Vision/TimestampSeconds", inputs.timestampSeconds);
     Logger.recordOutput("Vision/RejectionReason", lastRejectionReason);
-    double secondsSinceAcceptedMeasurement =
-        Utils.getCurrentTimeSeconds() - robotState.getLastAcceptedVisionTimestampSeconds();
-    boolean hasRecentMeasurement =
-        Double.isFinite(secondsSinceAcceptedMeasurement)
-            && secondsSinceAcceptedMeasurement <= RECENT_MEASUREMENT_SECONDS;
+    double secondsSinceAcceptedMeasurement = Utils.getCurrentTimeSeconds()
+        - robotState.getLastAcceptedVisionTimestampSeconds();
+    boolean hasRecentMeasurement = Double.isFinite(secondsSinceAcceptedMeasurement)
+        && secondsSinceAcceptedMeasurement <= RECENT_MEASUREMENT_SECONDS;
     Logger.recordOutput("Vision/HasRecentAcceptedMeasurement", hasRecentMeasurement);
-    Logger.recordOutput(
-        "Vision/SecondsSinceAcceptedMeasurement",
-        Double.isFinite(secondsSinceAcceptedMeasurement)
-            ? secondsSinceAcceptedMeasurement
+    Logger.recordOutput("Vision/SecondsSinceAcceptedMeasurement",
+        Double.isFinite(secondsSinceAcceptedMeasurement) ? secondsSinceAcceptedMeasurement
             : -1.0);
   }
 
@@ -111,14 +113,12 @@ public final class Vision extends SubsystemBase {
         || measurement.averageDistanceMeters() > configuration.maxTagDistanceMeters()) {
       return RejectionReason.TAG_TOO_FAR;
     }
-    if (Math.abs(yawRateDegreesPerSecond)
-        > configuration.maxAngularVelocityDegreesPerSecond()) {
+    if (Math.abs(yawRateDegreesPerSecond) > configuration.maxAngularVelocityDegreesPerSecond()) {
       return RejectionReason.ROTATING_TOO_FAST;
     }
-    Pose2d referencePose =
-        drive.samplePoseAt(measurement.timestampSeconds()).orElse(robotState.getPose());
-    if (referencePose.getTranslation().getDistance(measurement.pose().getTranslation())
-        > configuration.maxPoseJumpMeters()) {
+    Pose2d referencePose = drive.samplePoseAt(measurement.timestampSeconds()).orElse(robotState.getPose());
+    if (referencePose.getTranslation().getDistance(measurement.pose().getTranslation()) > configuration
+        .maxPoseJumpMeters()) {
       return RejectionReason.POSE_JUMP;
     }
     return RejectionReason.ACCEPTED;
@@ -137,8 +137,7 @@ public final class Vision extends SubsystemBase {
   }
 
   private static double calculateXyStandardDeviation(VisionMeasurement measurement) {
-    double distanceSquared =
-        measurement.averageDistanceMeters() * measurement.averageDistanceMeters();
+    double distanceSquared = measurement.averageDistanceMeters() * measurement.averageDistanceMeters();
     return measurement.tagCount() >= 2
         ? 0.20 + 0.05 * distanceSquared
         : 0.50 + 0.12 * distanceSquared;

@@ -8,23 +8,24 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import frc.robot.config.IntakeConfiguration;
 
-/** Phoenix 6 VoltageOut implementation for CAN 9 and CAN 10. */
 public final class IntakeIOReal implements IntakeIO {
   private final TalonFX alwaysOnMotor;
   private final TalonFX circleMotor;
   private final TalonFX[] motors;
-  private final VoltageOut alwaysOnRequest = new VoltageOut(0.0).withEnableFOC(true);
-  private final VoltageOut circleRequest = new VoltageOut(0.0).withEnableFOC(true);
+  private final VoltageOut alwaysOnRequest = new VoltageOut(0.0).withEnableFOC(false);
+  private final VoltageOut circleRequest = new VoltageOut(0.0).withEnableFOC(false);
 
   public IntakeIOReal(IntakeConfiguration configuration) {
     CANBus canBus =
         configuration.canBus().isBlank()
             ? CANBus.roboRIO()
             : new CANBus(configuration.canBus());
+
     alwaysOnMotor = new TalonFX(configuration.alwaysOnMotorCanId(), canBus);
     circleMotor = new TalonFX(configuration.circleMotorCanId(), canBus);
     motors = new TalonFX[] {alwaysOnMotor, circleMotor};
     TalonFXConfiguration motorConfiguration = new TalonFXConfiguration();
+    
     motorConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
     motorConfiguration.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     motorConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;

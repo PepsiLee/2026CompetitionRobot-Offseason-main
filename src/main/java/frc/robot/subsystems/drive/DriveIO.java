@@ -10,7 +10,10 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import java.util.Optional;
 
-/** Hardware boundary for Drive. Real hardware and simulation implement this independently. */
+/**
+ * Hardware boundary for Drive. Real hardware and simulation implement this
+ * independently.
+ */
 public interface DriveIO {
   class DriveIOInputs {
     public Pose2d pose = Pose2d.kZero;
@@ -23,19 +26,19 @@ public interface DriveIO {
 
     private static SwerveModuleState[] zeroModuleStates() {
       return new SwerveModuleState[] {
-        new SwerveModuleState(),
-        new SwerveModuleState(),
-        new SwerveModuleState(),
-        new SwerveModuleState()
+          new SwerveModuleState(),
+          new SwerveModuleState(),
+          new SwerveModuleState(),
+          new SwerveModuleState()
       };
     }
 
     private static SwerveModulePosition[] zeroModulePositions() {
       return new SwerveModulePosition[] {
-        new SwerveModulePosition(),
-        new SwerveModulePosition(),
-        new SwerveModulePosition(),
-        new SwerveModulePosition()
+          new SwerveModulePosition(),
+          new SwerveModulePosition(),
+          new SwerveModulePosition(),
+          new SwerveModulePosition()
       };
     }
   }
@@ -47,7 +50,8 @@ public interface DriveIO {
   void resetPose(Pose2d pose);
 
   default void addVisionMeasurement(
-      Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> standardDeviations) {}
+      Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> standardDeviations) {
+  }
 
   default Optional<Pose2d> samplePoseAt(double timestampSeconds) {
     return Optional.empty();

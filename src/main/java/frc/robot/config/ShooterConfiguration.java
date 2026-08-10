@@ -5,7 +5,6 @@ public record ShooterConfiguration(
     String canBus,
     int shootOneCanId,
     int shootTwoCanId,
-    int shootUpCanId,
     double shootOneVolts,
     double shootTwoVolts,
     double shootUpVolts,

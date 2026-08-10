@@ -1,11 +1,13 @@
 package frc.robot.subsystems.intake;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.config.IntakeConfiguration;
 import org.littletonrobotics.junction.Logger;
 
-/** Two voltage-controlled intake motors; gravity performs all downstream transport. */
+/**
+ * Two voltage-controlled intake motors; gravity performs all downstream
+ * transport.
+ */
 public final class Intake extends SubsystemBase {
   public enum WantedState {
     OFF,
@@ -26,15 +28,13 @@ public final class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    boolean runAlwaysOnMotor =
-        DriverStation.isEnabled()
-            && wantedState != WantedState.STOPPED
-            && (DriverStation.isTeleopEnabled() || wantedState == WantedState.INTAKE);
+    //TODO: remove this 
+    boolean runAlwaysOnMotor = wantedState != WantedState.STOPPED;
+
     double alwaysOnVolts = runAlwaysOnMotor ? configuration.alwaysOnVolts() : 0.0;
-    double circleMotorVolts =
-        DriverStation.isEnabled() && wantedState == WantedState.INTAKE
-            ? configuration.circleMotorVolts()
-            : 0.0;
+
+    double circleMotorVolts = wantedState == WantedState.INTAKE ? configuration.circleMotorVolts() : 0.0;
+
     io.setVoltages(alwaysOnVolts, circleMotorVolts);
 
     Logger.recordOutput("Intake/WantedState", wantedState);

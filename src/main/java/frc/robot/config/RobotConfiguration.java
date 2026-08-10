@@ -10,6 +10,8 @@ public interface RobotConfiguration {
 
   VisionConfiguration vision();
 
+  FeederConfiguration feeder();
+
   static RobotConfiguration competitionRobot() {
     return new CompetitionRobotConfig();
   }

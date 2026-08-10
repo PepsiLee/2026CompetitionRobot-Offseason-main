@@ -11,14 +11,11 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.TimestampedDouble;
 import edu.wpi.first.networktables.TimestampedDoubleArray;
-import edu.wpi.first.wpilibj.Timer;
 import frc.robot.config.VisionConfiguration;
 
 /** Raw NetworkTables adapter for a rear-facing Limelight running MegaTag2. */
 public final class VisionIOLimelight implements VisionIO {
   private static final int MINIMUM_BOTPOSE_LENGTH = 11;
-  private static final long CONNECTION_TIMEOUT_MICROSECONDS = 500_000;
-
   private final String name;
   private final NetworkTable table;
   private final DoubleArraySubscriber megaTag2PoseSubscriber;
@@ -45,10 +42,11 @@ public final class VisionIOLimelight implements VisionIO {
   @Override
   public void updateInputs(Inputs inputs) {
     TimestampedDouble heartbeat = heartbeatSubscriber.getAtomic();
-    long nowMicroseconds = (long) (Timer.getFPGATimestamp() * 1.0e6);
-    inputs.connected =
-        heartbeat.timestamp > 0
-            && Math.abs(nowMicroseconds - heartbeat.timestamp) <= CONNECTION_TIMEOUT_MICROSECONDS;
+    inputs.heartbeat = heartbeat.value;
+    // long nowMicroseconds = (long) (Timer.getFPGATimestamp() * 1.0e6);
+    // inputs.heartbeat =
+    //     heartbeat.timestamp > 0
+    //         && Math.abs(nowMicroseconds - heartbeat.timestamp) <= CONNECTION_TIMEOUT_MICROSECONDS;
 
     TimestampedDoubleArray atomicPose = megaTag2PoseSubscriber.getAtomic();
     double[] poseArray = atomicPose.value;

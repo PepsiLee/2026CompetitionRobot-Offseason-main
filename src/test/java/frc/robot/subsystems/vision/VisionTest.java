@@ -10,7 +10,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.RobotState;
 import frc.robot.config.DriveConfiguration;
 import frc.robot.config.VisionConfiguration;
-import frc.robot.constants.FieldConstants;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import java.util.Optional;
@@ -62,7 +61,7 @@ class VisionTest {
         new VisionIO() {
           @Override
           public void updateInputs(Inputs inputs) {
-            inputs.connected = true;
+            inputs.heartbeat = 0;
             inputs.hasTargets = true;
             inputs.estimatedPose = new Pose2d(2.2, 2.1, Rotation2d.kZero);
             inputs.timestampSeconds = timestamp;

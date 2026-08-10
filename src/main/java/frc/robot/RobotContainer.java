@@ -22,6 +22,8 @@ import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.DriveIO;
 import frc.robot.subsystems.drive.DriveIOReal;
 import frc.robot.subsystems.drive.DriveIOSim;
+import frc.robot.subsystems.feeder.Feeder;
+import frc.robot.subsystems.feeder.FeederIOReal;
 import frc.robot.subsystems.intake.Intake;
 import frc.robot.subsystems.intake.IntakeIOReal;
 import frc.robot.subsystems.intake.IntakeIOSim;
@@ -34,13 +36,16 @@ import frc.robot.subsystems.vision.VisionIOLimelight;
 public class RobotContainer {
   private final RobotConfiguration configuration = RobotConfiguration.competitionRobot();
   private final RobotState robotState = new RobotState();
-  private final SimulatedRobotState simulatedRobotState =
-      RobotBase.isSimulation() ? new SimulatedRobotState(this) : null;
+  private final SimulatedRobotState simulatedRobotState = RobotBase.isSimulation() ? new SimulatedRobotState(this)
+      : null;
+
   private final Drive drive;
   private final Intake intake;
   private final Shooter shooter;
   private final Vision vision;
+  private final Feeder feeder;
   private final SuperStructure superStructure;
+
   private final AutoFactory autoFactory;
   private final SendableChooser<AutoMode> autoChooser = new SendableChooser<>();
   private final CommandPS5Controller driverController = new CommandPS5Controller(0);
@@ -58,18 +63,19 @@ public class RobotContainer {
     if (RobotBase.isReal()) {
       intake = new Intake(new IntakeIOReal(configuration.intake()), configuration.intake());
       shooter = new Shooter(new ShooterIOReal(configuration.shooter()), configuration.shooter());
+      feeder = new Feeder(new FeederIOReal(configuration.feeder()), configuration.feeder());
     } else {
       intake = new Intake(new IntakeIOSim(), configuration.intake());
       shooter = new Shooter(new ShooterIOSim(), configuration.shooter());
+      feeder = new Feeder(new FeederIOReal(configuration.feeder()), configuration.feeder());
     }
 
-    superStructure = new SuperStructure(drive, robotState, intake, shooter);
-    vision =
-        new Vision(
-            robotState,
-            drive,
-            configuration.vision(),
-            new VisionIOLimelight(configuration.vision()));
+    superStructure = new SuperStructure(drive, robotState, intake, shooter, feeder);
+    vision = new Vision(
+        robotState,
+        drive,
+        configuration.vision(),
+        new VisionIOLimelight(configuration.vision()));
     autoFactory = new AutoFactory(drive, superStructure);
 
     if (RobotBase.isSimulation() && Constants.useMapleSim) {
@@ -84,32 +90,45 @@ public class RobotContainer {
   private void configureBindings() {
     drive.setDefaultCommand(
         drive.run(
-                () ->
-                    drive.acceptTeleopInput(
-                        driverController.getLeftY(),
-                        driverController.getLeftX(),
-                        -driverController.getRightX()))
+            () -> drive.acceptTeleopInput(
+                driverController.getLeftY(),
+                driverController.getLeftX(),
+                -driverController.getRightX()))
             .withName("Drive Field Relative"));
 
     driverController
         .create()
         .onTrue(Commands.runOnce(drive::resetHeadingForAlliance).ignoringDisable(true));
 
+    // Intake and deploy Pivot
     driverController
         .circle()
         .and(DriverStation::isTeleopEnabled)
         .onTrue(Commands.runOnce(() -> superStructure.setIntakeRequested(true)))
         .onFalse(Commands.runOnce(() -> superStructure.setIntakeRequested(false)));
+
+    // Aim and Shoot
     driverController
         .triangle()
         .and(DriverStation::isTeleopEnabled)
         .onTrue(Commands.runOnce(() -> superStructure.setShootRequested(true)))
         .onFalse(Commands.runOnce(() -> superStructure.setShootRequested(false)));
+
+    // Direct Shoot
     driverController
         .square()
         .and(DriverStation::isTeleopEnabled)
         .onTrue(Commands.runOnce(() -> superStructure.setDirectShootRequested(true)))
         .onFalse(Commands.runOnce(() -> superStructure.setDirectShootRequested(false)));
+
+    if (RobotBase.isSimulation()) {
+      driverController
+          .triangle()
+          .and(DriverStation::isTeleopEnabled)
+          .whileTrue(
+              Commands.run(
+                  () -> simulatedRobotState.launchFuel()));
+    }
   }
 
   private void configureAutoChooser() {
@@ -157,6 +176,10 @@ public class RobotContainer {
 
   public Vision getVision() {
     return vision;
+  }
+
+  public Feeder getFeeder() {
+    return feeder;
   }
 
   public SimulatedRobotState getSimulatedRobotState() {
