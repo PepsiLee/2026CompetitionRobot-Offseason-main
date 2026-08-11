@@ -1,6 +1,6 @@
 package frc.robot.subsystems.intake;
 
-/** Hardware boundary for the two independent intake motors. */
+
 public interface IntakeIO {
   class Inputs {
     public boolean[] connected = new boolean[2];
@@ -13,9 +13,11 @@ public interface IntakeIO {
 
   default void updateInputs(Inputs inputs) {}
 
-  default void setVoltages(double alwaysOnVolts, double circleMotorVolts) {}
+  default void setRollerVoltages(double rollerVolts) {}
 
   default void stop() {
-    setVoltages(0.0, 0.0);
+    setRollerVoltages(0.0);
   }
+
+  public default void setPivotPosition(Intake.Position position) {}
 }

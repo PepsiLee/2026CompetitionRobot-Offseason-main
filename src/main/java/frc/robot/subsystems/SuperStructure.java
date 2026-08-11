@@ -127,7 +127,7 @@ public final class SuperStructure extends SubsystemBase {
 
   private void applyState() {
     if (systemState == SystemState.FAULT || systemState == SystemState.STOPPED) {
-      intake.setWantedState(Intake.WantedState.STOPPED);
+      intake.setWantedState(Intake.WantedState.OFF);
     } else {
       intake.setWantedState(
           intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.OFF);
@@ -215,7 +215,7 @@ public final class SuperStructure extends SubsystemBase {
     directShootRequested = false;
     stopped = true;
     systemState = SystemState.STOPPED;
-    intake.setWantedState(Intake.WantedState.STOPPED);
+    intake.setWantedState(Intake.WantedState.OFF);
     shooter.setWantedState(Shooter.WantedState.OFF);
     feeder.setWantedState(Feeder.WantedState.OFF);
     drive.stop();

@@ -17,8 +17,7 @@ public final class IntakeIOSim implements IntakeIO {
   }
 
   @Override
-  public void setVoltages(double alwaysOnVolts, double circleMotorVolts) {
-    commandedVolts[0] = alwaysOnVolts;
-    commandedVolts[1] = circleMotorVolts;
+  public void setRollerVoltages(double rollerVolts) {
+    commandedVolts[0] = rollerVolts;
   }
 }
