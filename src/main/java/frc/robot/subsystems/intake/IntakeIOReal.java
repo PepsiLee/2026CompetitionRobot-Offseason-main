@@ -57,6 +57,7 @@ public final class IntakeIOReal implements IntakeIO {
 
     configurePivotMotor();
   }
+
   // deploy the intake is positive power
   private void configurePivotMotor() {
     final TalonFXConfiguration config = new TalonFXConfiguration()
@@ -87,17 +88,24 @@ public final class IntakeIOReal implements IntakeIO {
     pivotMotor.getConfigurator().apply(config);
   }
 
-  @Override
+@Override
   public void updateInputs(Inputs inputs) {
-    for (int i = 0; i < motors.length; i++) {
-      TalonFX motor = motors[i];
-      inputs.connected[i] = motor.getVersion().getStatus().isOK();
-      inputs.velocityRotationsPerSecond[i] = motor.getVelocity().getValueAsDouble();
-      inputs.appliedVolts[i] = motor.getMotorVoltage().getValueAsDouble();
-      inputs.supplyCurrentAmps[i] = motor.getSupplyCurrent().getValueAsDouble();
-      inputs.statorCurrentAmps[i] = motor.getStatorCurrent().getValueAsDouble();
-      inputs.temperatureCelsius[i] = motor.getDeviceTemp().getValueAsDouble();
-    }
+    // 1. Roller (Intake Roller) 數據更新
+    inputs.rollerConnected = intakeMotor.getVersion().getStatus().isOK();
+    inputs.rollerVelocityRotationsPerSecond = intakeMotor.getVelocity().getValueAsDouble();
+    inputs.rollerAppliedVolts = intakeMotor.getMotorVoltage().getValueAsDouble();
+    inputs.rollerSupplyCurrentAmps = intakeMotor.getSupplyCurrent().getValueAsDouble();
+    inputs.rollerStatorCurrentAmps = intakeMotor.getStatorCurrent().getValueAsDouble();
+    inputs.rollerTempCelsius = intakeMotor.getDeviceTemp().getValueAsDouble();
+
+    // 2. Pivot 馬達數據更新
+    inputs.pivotConnected = pivotMotor.getVersion().getStatus().isOK();
+    inputs.pivotPositionDegrees = pivotMotor.getPosition().getValue().in(Degrees);
+    inputs.pivotVelocityRotationsPerSecond = pivotMotor.getVelocity().getValueAsDouble();
+    inputs.pivotAppliedVolts = pivotMotor.getMotorVoltage().getValueAsDouble();
+    inputs.pivotSupplyCurrentAmps = pivotMotor.getSupplyCurrent().getValueAsDouble();
+    inputs.pivotStatorCurrentAmps = pivotMotor.getStatorCurrent().getValueAsDouble();
+    inputs.pivotTempCelsius = pivotMotor.getDeviceTemp().getValueAsDouble();
   }
 
   @Override
@@ -111,14 +119,16 @@ public final class IntakeIOReal implements IntakeIO {
             .withPosition(position.angle()));
   }
 
-  @SuppressWarnings("unused")
-  private void setPivotPercentOutput(double percentOutput) {
-    pivotMotor.setControl(
-        pivotVoltageRequest
-            .withOutput(Volts.of(percentOutput * 12.0)));
+  @Override
+  public void setPivotVoltage(double volts) {
+    pivotMotor.setControl(pivotVoltageRequest.withOutput(volts));
   }
 
-  @SuppressWarnings("unused")
+  @Override
+  public void resetPivotEncoder(Angle angle) {
+    pivotMotor.setPosition(angle);
+  }
+  
   private boolean isPositionWithinTolerance() {
     final Angle currentPosition = pivotMotor.getPosition().getValue();
     final Angle targetPosition = pivotMotionMagicRequest.getPositionMeasure();

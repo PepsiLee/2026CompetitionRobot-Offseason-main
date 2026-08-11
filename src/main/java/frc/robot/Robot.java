@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.FieldConstants;
 import frc.robot.util.ShooterCalculator;
 
@@ -136,6 +137,8 @@ public class Robot extends LoggedRobot {
     SmartDashboard.setDefaultNumber("Shooter/Target RPM", 0.0);
     SmartDashboard.setDefaultNumber("Intake/Target Voltage", 0.0);
     SmartDashboard.setDefaultNumber("Intake Pivot/Target Voltage", 0.0);
+
+    
   }
 
   @Override
@@ -155,8 +158,8 @@ public class Robot extends LoggedRobot {
     m_robotContainer.getFeeder().setWantedState(feeder ? frc.robot.subsystems.feeder.Feeder.WantedState.TEST_SHOOTER
         : frc.robot.subsystems.feeder.Feeder.WantedState.OFF);
     m_robotContainer.getFeeder().setVoltage(targetVoltage);
-    m_robotContainer.getIntake().setWantedState(intake ? frc.robot.subsystems.intake.Intake.WantedState.TEST_INTAKE
-        : frc.robot.subsystems.intake.Intake.WantedState.OFF);
+    m_robotContainer.getIntake().setWantedState(intake ? frc.robot.subsystems.intake.Intake.WantedState.TEST_ROLLER
+        : frc.robot.subsystems.intake.Intake.WantedState.STOP);
     m_robotContainer.getIntake().setIntakeTestVoltage(intakeTargetVoltage);
 
     Pose2d pose = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-rear").pose;

@@ -1,23 +1,30 @@
 package frc.robot.subsystems.intake;
 
+import edu.wpi.first.units.measure.Angle;
 
 public interface IntakeIO {
-  class Inputs {
-    public boolean[] connected = new boolean[2];
-    public double[] velocityRotationsPerSecond = new double[2];
-    public double[] appliedVolts = new double[2];
-    public double[] supplyCurrentAmps = new double[2];
-    public double[] statorCurrentAmps = new double[2];
-    public double[] temperatureCelsius = new double[2];
+  public static class Inputs {
+    // 1. Roller (Intake Roller) 馬達數據
+    public boolean rollerConnected = false;
+    public double rollerVelocityRotationsPerSecond = 0.0;
+    public double rollerAppliedVolts = 0.0;
+    public double rollerSupplyCurrentAmps = 0.0;
+    public double rollerStatorCurrentAmps = 0.0;
+    public double rollerTempCelsius = 0.0;
+
+    // 2. Pivot (機構轉軸) 馬達數據
+    public boolean pivotConnected = false;
+    public double pivotPositionDegrees = 0.0;
+    public double pivotVelocityRotationsPerSecond = 0.0;
+    public double pivotAppliedVolts = 0.0;
+    public double pivotSupplyCurrentAmps = 0.0;
+    public double pivotStatorCurrentAmps = 0.0;
+    public double pivotTempCelsius = 0.0;
   }
 
-  default void updateInputs(Inputs inputs) {}
-
-  default void setRollerVoltages(double rollerVolts) {}
-
-  default void stop() {
-    setRollerVoltages(0.0);
-  }
-
+  public default void updateInputs(Inputs inputs) {}
+  public default void setRollerVoltages(double volts) {}
   public default void setPivotPosition(Intake.Position position) {}
+  public default void setPivotVoltage(double volts) {}
+  public default void resetPivotEncoder(Angle angle) {}
 }

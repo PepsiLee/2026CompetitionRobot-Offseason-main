@@ -104,9 +104,6 @@ public final class DriveIOSim extends DriveIOReal {
 
       simulatedRobotState.addFieldToRobot(maplePose);
 
-      Logger.recordOutput(
-          "FieldSimulation/Fuel",
-          SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
       Logger.recordOutput("Drive/Viz/SimPose", simulatedRobotState.getLatestFieldToRobot());
       Logger.recordOutput("Drive/Viz/SimPose3d", simulatedPose3d);
       Logger.recordOutput("Drive/Viz/IsOnBump", robotBumpSim.isOnRamp());

@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.autos.AutoFactory;
 import frc.robot.autos.AutoMode;
 import frc.robot.autos.AutoRoutine;
@@ -85,9 +86,15 @@ public class RobotContainer {
 
     configureBindings();
     configureAutoChooser();
+
   }
 
   private void configureBindings() {
+
+    // Homing when test mode
+    // TODO : AFTER check ok change to auto
+    RobotModeTriggers.test().onTrue(intake.homingCommand());
+
     drive.setDefaultCommand(
         drive.run(
             () -> drive.acceptTeleopInput(

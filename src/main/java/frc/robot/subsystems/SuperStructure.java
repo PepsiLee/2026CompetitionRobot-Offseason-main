@@ -127,10 +127,10 @@ public final class SuperStructure extends SubsystemBase {
 
   private void applyState() {
     if (systemState == SystemState.FAULT || systemState == SystemState.STOPPED) {
-      intake.setWantedState(Intake.WantedState.OFF);
+      intake.setWantedState(Intake.WantedState.STOP);
     } else {
       intake.setWantedState(
-          intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.OFF);
+          intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.STOP);
     }
 
     switch (systemState) {
@@ -215,7 +215,7 @@ public final class SuperStructure extends SubsystemBase {
     directShootRequested = false;
     stopped = true;
     systemState = SystemState.STOPPED;
-    intake.setWantedState(Intake.WantedState.OFF);
+    intake.setWantedState(Intake.WantedState.STOP);
     shooter.setWantedState(Shooter.WantedState.OFF);
     feeder.setWantedState(Feeder.WantedState.OFF);
     drive.stop();
@@ -226,7 +226,7 @@ public final class SuperStructure extends SubsystemBase {
     faultReason = "";
     systemState = intakeRequested ? SystemState.INTAKING : SystemState.IDLE;
     intake.setWantedState(
-        intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.OFF);
+        intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.STOP);
     shooter.setWantedState(Shooter.WantedState.OFF);
     feeder.setWantedState(Feeder.WantedState.OFF);
     drive.releaseAim();
