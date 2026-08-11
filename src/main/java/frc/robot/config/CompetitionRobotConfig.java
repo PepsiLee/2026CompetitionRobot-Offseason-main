@@ -115,10 +115,9 @@ public final class CompetitionRobotConfig implements RobotConfiguration {
         // transform.
         visionConfiguration = new VisionConfiguration(
                 "limelight-rear",
-                // TODO: Need to be check in the CAD
                 new Transform3d(
                         new Translation3d(-0.332486, 0.0, 0.171958),
-                        new Rotation3d(0.0, 0.0, Math.PI)),
+                        new Rotation3d(0.0, Math.toRadians(15), Math.PI)),
                 6.0,
                 720.0,
                 1.0,
@@ -127,8 +126,8 @@ public final class CompetitionRobotConfig implements RobotConfiguration {
         feederConfiguration = new FeederConfiguration(
                 CAN_BUS,
                 32,
-                7.0,
-                -7.0,
+                8.0,
+                -8.0,
                 12.0,
                 120);
     }

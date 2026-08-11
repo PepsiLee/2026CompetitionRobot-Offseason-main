@@ -12,13 +12,15 @@ public final class Intake extends SubsystemBase {
   public enum WantedState {
     OFF,
     INTAKE,
-    STOPPED
+    STOPPED,
+    TEST_INTAKE
   }
 
   private final IntakeIO io;
   private final IntakeIO.Inputs inputs = new IntakeIO.Inputs();
   private final IntakeConfiguration configuration;
   private WantedState wantedState = WantedState.OFF;
+  private double intakeTestVoltage = 0.0;
 
   public Intake(IntakeIO io, IntakeConfiguration configuration) {
     this.io = io;
@@ -28,10 +30,27 @@ public final class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    boolean runAlwaysOnMotor = wantedState != WantedState.STOPPED;
-    double alwaysOnVolts = runAlwaysOnMotor ? configuration.alwaysOnVolts() : 0.0;
+    double alwaysOnVolts = 0.0;
+    double circleMotorVolts = 0.0;
 
-    double circleMotorVolts = wantedState == WantedState.INTAKE ? configuration.circleMotorVolts() : 0.0;
+    switch (wantedState) {
+      case INTAKE:
+        alwaysOnVolts = configuration.alwaysOnVolts();
+        circleMotorVolts = configuration.circleMotorVolts();
+        break;
+
+      case OFF:
+      case TEST_INTAKE:
+        alwaysOnVolts = intakeTestVoltage;
+        circleMotorVolts = 0.0;
+        break;
+
+      case STOPPED:
+      default:
+        alwaysOnVolts = 0.0;
+        circleMotorVolts = 0.0;
+        break;
+    }
 
     io.setVoltages(alwaysOnVolts, circleMotorVolts);
 
@@ -54,7 +73,7 @@ public final class Intake extends SubsystemBase {
     return wantedState;
   }
 
-  public void setVoltage(double alwaysOnVolts, double circleMotorVolts) {
-    io.setVoltages(alwaysOnVolts, circleMotorVolts);
+  public void setIntakeTestVoltage(double voltage) {
+    intakeTestVoltage = voltage;
   }
 }

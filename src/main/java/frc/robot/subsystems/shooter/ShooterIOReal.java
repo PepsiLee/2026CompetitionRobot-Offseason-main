@@ -92,7 +92,7 @@ public final class ShooterIOReal implements ShooterIO {
   }
 
   public void setRPM(double rpm) {
-    rpm = rpm / configuration.gearRatio();
+    rpm = rpm * configuration.gearRatio();
     for (final TalonFX motor : motors) {
       motor.setControl(
           motionMagicVelocityVoltage.withVelocity(RPM.of(rpm)));
