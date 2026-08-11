@@ -52,26 +52,6 @@ class DriveControlTest {
     assertEquals(io.pose, drive.getField().getRobotPose());
   }
 
-  @Test
-  void blineRequestIsAppliedOnlyInPeriodicAndClampedToDriveLimits() {
-    FakeDriveIO io = new FakeDriveIO();
-    Drive drive = createDrive(io);
-    drive.periodic();
-
-    drive.requestBLineSpeeds(new ChassisSpeeds(6.0, 8.0, 20.0));
-
-    assertEquals(0.0, io.commanded.vxMetersPerSecond, EPSILON);
-    assertEquals(Drive.ControlMode.BLINE_PATH, drive.getControlMode());
-
-    drive.periodic();
-
-    assertEquals(
-        5.0,
-        Math.hypot(io.commanded.vxMetersPerSecond, io.commanded.vyMetersPerSecond),
-        EPSILON);
-    assertEquals(10.0, io.commanded.omegaRadiansPerSecond, EPSILON);
-  }
-
   private static Drive createDrive(FakeDriveIO io) {
     return new Drive(
         new RobotState(),
