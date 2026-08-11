@@ -121,7 +121,6 @@ public final class CompetitionRobotConfig implements RobotConfiguration {
                         new Rotation3d(0.0, 0.0, Math.PI)),
                 6.0,
                 720.0,
-                1.0,
                 0.5);
 
         feederConfiguration = new FeederConfiguration(

@@ -23,6 +23,8 @@ import org.littletonrobotics.junction.Logger;
  * aiming.
  */
 public final class SuperStructure extends SubsystemBase {
+  record ShotTargets(Translation2d aimTarget, Translation2d distanceTarget) {}
+
   public enum SystemState {
     IDLE,
     INTAKING,
@@ -53,6 +55,9 @@ public final class SuperStructure extends SubsystemBase {
   private boolean stopped;
   // Current state of the superstructure
   private SystemState systemState = SystemState.IDLE;
+  private Translation2d desiredAimTarget = FieldConstants.BLUE_TAG_AIM_TARGET;
+  private Translation2d shotDistanceTarget = FieldConstants.BLUE_HUB;
+  private double desiredShotDistanceMeters;
   private Rotation2d desiredAimHeading = Rotation2d.kZero;
   private Rotation2d lockedShotHeading = Rotation2d.kZero;
   private double lockedShotDistanceMeters;
@@ -69,8 +74,12 @@ public final class SuperStructure extends SubsystemBase {
   @Override
   public void periodic() {
     Alliance alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
-    Translation2d hub = FieldConstants.hubForAlliance(alliance);
-    desiredAimHeading = calculateRearShooterHeading(robotState.getPose(), hub);
+    ShotTargets targets = targetsForAlliance(alliance);
+    desiredAimTarget = targets.aimTarget();
+    shotDistanceTarget = targets.distanceTarget();
+    desiredAimHeading = calculateRearShooterHeading(robotState.getPose(), desiredAimTarget);
+    desiredShotDistanceMeters =
+        robotState.getPose().getTranslation().getDistance(shotDistanceTarget);
 
     systemState = determineState();
     applyState();
@@ -79,6 +88,9 @@ public final class SuperStructure extends SubsystemBase {
     Logger.recordOutput("SuperStructure/IntakeRequested", intakeRequested);
     Logger.recordOutput("SuperStructure/ShootRequested", shootRequested);
     Logger.recordOutput("SuperStructure/DirectShootRequested", directShootRequested);
+    Logger.recordOutput("SuperStructure/TagAimTarget", desiredAimTarget);
+    Logger.recordOutput("SuperStructure/HubDistanceTarget", shotDistanceTarget);
+    Logger.recordOutput("SuperStructure/DesiredShotDistanceMeters", desiredShotDistanceMeters);
     Logger.recordOutput("SuperStructure/DesiredAimHeading", desiredAimHeading);
     Logger.recordOutput("SuperStructure/LockedShotHeading", lockedShotHeading);
     Logger.recordOutput("SuperStructure/LockedShotDistanceMeters", lockedShotDistanceMeters);
@@ -119,9 +131,7 @@ public final class SuperStructure extends SubsystemBase {
     }
 
     lockedShotHeading = desiredAimHeading;
-    lockedShotDistanceMeters = robotState.getPose().getTranslation().getDistance(
-        FieldConstants.hubForAlliance(
-            DriverStation.getAlliance().orElse(Alliance.Blue)));
+    lockedShotDistanceMeters = desiredShotDistanceMeters;
     return SystemState.SHOOTING;
   }
 
@@ -160,14 +170,14 @@ public final class SuperStructure extends SubsystemBase {
         drive.requestAimStationary(lockedShotHeading);
       }
       case DIRECT_SHOOTING -> {
-        shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
+        shooter.setRPM(ShooterCalculator.calculateRPM(desiredShotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
         if (shooter.isReady()) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);
         } else {
           feeder.setWantedState(Feeder.WantedState.OFF);
         }
-        drive.releaseAim();
+        drive.requestAimStationary(desiredAimHeading);
       }
       case FAULT, STOPPED -> {
         shooter.setWantedState(Shooter.WantedState.OFF);
@@ -182,6 +192,12 @@ public final class SuperStructure extends SubsystemBase {
         .minus(robotPose.getTranslation())
         .getAngle()
         .plus(Rotation2d.k180deg);
+  }
+
+  static ShotTargets targetsForAlliance(Alliance alliance) {
+    return new ShotTargets(
+        FieldConstants.tagAimTargetForAlliance(alliance),
+        FieldConstants.hubForAlliance(alliance));
   }
 
   public void setIntakeRequested(boolean requested) {

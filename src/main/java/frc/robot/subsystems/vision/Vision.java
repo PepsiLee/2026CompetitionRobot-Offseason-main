@@ -24,8 +24,7 @@ public final class Vision extends SubsystemBase {
     STALE,
     OUTSIDE_FIELD,
     TAG_TOO_FAR,
-    ROTATING_TOO_FAST,
-    POSE_JUMP
+    ROTATING_TOO_FAST
   }
 
   private static final double MAX_MEASUREMENT_AGE_SECONDS = 0.50;
@@ -61,6 +60,19 @@ public final class Vision extends SubsystemBase {
         inputs.tagCount,
         inputs.averageDistanceMeters);
 
+    Pose2d referencePose = robotState.getPose();
+    double poseDifferenceMeters = Double.NaN;
+    if (measurement.tagCount() > 0
+        && Double.isFinite(measurement.timestampSeconds())
+        && measurement.timestampSeconds() > 0.0) {
+      referencePose =
+          drive.samplePoseAt(measurement.timestampSeconds()).orElse(referencePose);
+      poseDifferenceMeters =
+          referencePose
+              .getTranslation()
+              .getDistance(measurement.pose().getTranslation());
+    }
+
     lastRejectionReason = evaluate(measurement, yawRateDegreesPerSecond);
 
     if (lastRejectionReason == RejectionReason.ACCEPTED) {
@@ -76,8 +88,16 @@ public final class Vision extends SubsystemBase {
     }
 
     Logger.recordOutput("Vision/Heartbeat", inputs.heartbeat);
+    Logger.recordOutput("Vision/Connected", inputs.connected);
+    Logger.recordOutput("Vision/TargetValid", inputs.targetValid);
+    Logger.recordOutput("Vision/PrimaryTagId", inputs.primaryTagId);
+    Logger.recordOutput("Vision/PipelineIndex", inputs.pipelineIndex);
+    Logger.recordOutput("Vision/PipelineType", inputs.pipelineType);
+    Logger.recordOutput("Vision/Status", getStatus());
     Logger.recordOutput("Vision/HasTargets", inputs.hasTargets);
     Logger.recordOutput("Vision/EstimatedPose", inputs.estimatedPose);
+    Logger.recordOutput("Vision/ReferencePose", referencePose);
+    Logger.recordOutput("Vision/PoseDifferenceMeters", poseDifferenceMeters);
     Logger.recordOutput("Vision/TagCount", inputs.tagCount);
     Logger.recordOutput("Vision/AverageDistanceMeters", inputs.averageDistanceMeters);
     Logger.recordOutput("Vision/TimestampSeconds", inputs.timestampSeconds);
@@ -116,16 +136,27 @@ public final class Vision extends SubsystemBase {
     if (Math.abs(yawRateDegreesPerSecond) > configuration.maxAngularVelocityDegreesPerSecond()) {
       return RejectionReason.ROTATING_TOO_FAST;
     }
-    Pose2d referencePose = drive.samplePoseAt(measurement.timestampSeconds()).orElse(robotState.getPose());
-    if (referencePose.getTranslation().getDistance(measurement.pose().getTranslation()) > configuration
-        .maxPoseJumpMeters()) {
-      return RejectionReason.POSE_JUMP;
-    }
     return RejectionReason.ACCEPTED;
   }
 
   public RejectionReason getLastRejectionReason() {
     return lastRejectionReason;
+  }
+
+  private String getStatus() {
+    if (!inputs.connected) {
+      return "DISCONNECTED";
+    }
+    if (lastRejectionReason == RejectionReason.ACCEPTED) {
+      return "ACCEPTED";
+    }
+    if (!inputs.targetValid) {
+      return "NO_TARGET";
+    }
+    if (inputs.tagCount <= 0) {
+      return "NO_MT2_POSE";
+    }
+    return "REJECTED_" + lastRejectionReason;
   }
 
   private boolean isInsideField(Pose2d pose) {
