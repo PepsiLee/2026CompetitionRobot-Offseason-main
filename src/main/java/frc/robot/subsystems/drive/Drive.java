@@ -30,7 +30,6 @@ public final class Drive extends SubsystemBase {
     TELEOP,
     AIM_STATIONARY,
     DRIVE_TO_POSE,
-    BLINE_PATH,
     STOPPED
   }
   private static final double JOYSTICK_DEADBAND = 0.10;
@@ -53,7 +52,6 @@ public final class Drive extends SubsystemBase {
   private double teleopXInput;
   private double teleopYInput;
   private double teleopOmegaInput;
-  private ChassisSpeeds blineRequestedRobotRelativeSpeeds = new ChassisSpeeds();
   private Rotation2d targetHeading = Rotation2d.kZero;
   private Pose2d targetPose = Pose2d.kZero;
   private double driveToPoseMaxSpeedMetersPerSecond;
@@ -94,7 +92,6 @@ public final class Drive extends SubsystemBase {
     Logger.recordOutput("Drive/ModulePositions", inputs.modulePositions);
     Logger.recordOutput("Drive/TargetHeading", targetHeading);
     Logger.recordOutput("Drive/TargetPose", targetPose);
-    Logger.recordOutput("Drive/BLineRequestedSpeeds", blineRequestedRobotRelativeSpeeds);
     Logger.recordOutput("Drive/HeadingErrorRadians", getHeadingErrorRadians(targetHeading));
   }
 
@@ -146,26 +143,6 @@ public final class Drive extends SubsystemBase {
         inputs.measuredRobotRelativeSpeeds.omegaRadiansPerSecond);
     driveToPoseDebouncer.calculate(false);
     controlMode = ControlMode.DRIVE_TO_POSE;
-  }
-
-  /**
-   * Stores BLine's robot-relative request; Drive.periodic remains the only
-   * DriveIO writer.
-   */
-  public void requestBLineSpeeds(ChassisSpeeds robotRelativeSpeeds) {
-    blineRequestedRobotRelativeSpeeds = new ChassisSpeeds(
-        robotRelativeSpeeds.vxMetersPerSecond,
-        robotRelativeSpeeds.vyMetersPerSecond,
-        robotRelativeSpeeds.omegaRadiansPerSecond);
-    controlMode = ControlMode.BLINE_PATH;
-  }
-
-  /** Returns measured robot-relative speeds for BLine feedback. */
-  public ChassisSpeeds getMeasuredRobotRelativeSpeeds() {
-    return new ChassisSpeeds(
-        inputs.measuredRobotRelativeSpeeds.vxMetersPerSecond,
-        inputs.measuredRobotRelativeSpeeds.vyMetersPerSecond,
-        inputs.measuredRobotRelativeSpeeds.omegaRadiansPerSecond);
   }
 
   public boolean isAtDriveToPoseSetpoint() {
@@ -245,27 +222,8 @@ public final class Drive extends SubsystemBase {
         io.runVelocity(new ChassisSpeeds(0.0, 0.0, omega));
       }
       case DRIVE_TO_POSE -> io.runVelocity(calculateDriveToPoseSpeeds());
-      case BLINE_PATH -> io.runVelocity(limitBLineSpeeds(blineRequestedRobotRelativeSpeeds));
       case STOPPED -> io.stop();
     }
-  }
-
-  private ChassisSpeeds limitBLineSpeeds(ChassisSpeeds requestedSpeeds) {
-    double vx = requestedSpeeds.vxMetersPerSecond;
-    double vy = requestedSpeeds.vyMetersPerSecond;
-    double translationSpeed = Math.hypot(vx, vy);
-    if (translationSpeed > maxLinearSpeedMetersPerSecond && translationSpeed > 1.0e-9) {
-      double scale = maxLinearSpeedMetersPerSecond / translationSpeed;
-      vx *= scale;
-      vy *= scale;
-    }
-    return new ChassisSpeeds(
-        vx,
-        vy,
-        MathUtil.clamp(
-            requestedSpeeds.omegaRadiansPerSecond,
-            -maxAngularSpeedRadiansPerSecond,
-            maxAngularSpeedRadiansPerSecond));
   }
 
   private ChassisSpeeds calculateTeleopSpeeds() {

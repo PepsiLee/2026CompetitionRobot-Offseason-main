@@ -31,7 +31,6 @@ import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterIOReal;
 import frc.robot.subsystems.shooter.ShooterIOSim;
 import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionIOLimelight;
 import frc.robot.subsystems.vision.VisionIOLimelightHelper;
 
 public class RobotContainer {
@@ -135,9 +134,6 @@ public class RobotContainer {
   private void configureAutoChooser() {
     autoChooser.setDefaultOption("Do Nothing", AutoMode.DO_NOTHING);
     autoChooser.addOption("Shoot Only", AutoMode.SHOOT_ONLY);
-    autoChooser.addOption("BLine Intake + Shoot", AutoMode.BLINE_INTAKE_SHOOT);
-    autoChooser.addOption("Left Collect + Return", AutoMode.LEFT_COLLECT_RETURN);
-    autoChooser.addOption("Right Collect + Return", AutoMode.RIGHT_COLLECT_RETURN);
     SmartDashboard.putData("Auto/Mode", autoChooser);
   }
 

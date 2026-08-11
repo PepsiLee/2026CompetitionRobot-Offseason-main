@@ -110,7 +110,7 @@ public final class SuperStructure extends SubsystemBase {
       }
       return SystemState.SHOOTING;
     }
-  
+
     drive.requestAimStationary(desiredAimHeading);
     boolean aimReady = drive.isAtHeading(desiredAimHeading, AIM_ENTER_TOLERANCE_RADIANS)
         && Math.abs(drive.getAngularVelocityRadiansPerSecond()) <= AIM_MAX_ANGULAR_SPEED_RADIANS_PER_SECOND;
