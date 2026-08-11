@@ -31,13 +31,14 @@ public final class Intake extends SubsystemBase {
   }
 
   public enum WantedState {
-    STOP(Position.INTAKE, 0.0),        // 停止
-    INTAKE(Position.INTAKE, 12.0),    // 吃球狀態
-    AGITATE(Position.AGITATE, 6.0),   // 攪球狀態
-    HOME(Position.HOMED, 0.0),        // 歸位狀態（透過 PID 移動到 HOMED 角度）
-    HOMING(Position.HOMED, 0.0),      // 歸零中（固定電壓撞牆尋找基準點）
+    STOP(Position.INTAKE, 0.0), // 停止
+    INTAKE(Position.INTAKE, 12.0), // 吃球狀態
+    AGITATE(Position.AGITATE, 6.0), // 攪球狀態
+    HOME(Position.HOMED, 0.0), // 歸位狀態（透過 PID 移動到 HOMED 角度）
+    HOMING(Position.HOMED, 0.0), // 歸零中（固定電壓撞牆尋找基準點）
     TEST_INTAKE(Position.INTAKE, 0.0), // 測試吃球(包含滾軸)
-    TEST_ROLLER(Position.HOMED, 0.0); // 只有滾軸
+    TEST_ROLLER(Position.HOMED, 0.0), // 只有滾軸
+    TEST(Position.HOMED, 0.0);
 
     private final Position targetPosition;
     private final double defaultRollerVolts;
@@ -61,7 +62,7 @@ public final class Intake extends SubsystemBase {
   private final IntakeConfiguration configuration;
 
   private WantedState wantedState = WantedState.STOP;
-  private Position customPivotPosition = Position.HOMED;
+  private Angle customPivotAngle = Degrees.of(0);
   private boolean overridePivotPosition = false;
   private double intakeTestVoltage = 0.0;
 
@@ -82,7 +83,7 @@ public final class Intake extends SubsystemBase {
     io.setRollerVoltages(rollerVolts);
 
     // 2. 依據狀態機決定 Pivot 控制模式
-    Position targetPivotPosition = overridePivotPosition ? customPivotPosition : wantedState.getTargetPosition();
+    Angle targetPivotAngle = overridePivotPosition ? customPivotAngle : wantedState.getTargetPosition().angle();
 
     switch (wantedState) {
       case HOMING:
@@ -95,13 +96,14 @@ public final class Intake extends SubsystemBase {
       case INTAKE:
       case AGITATE:
       case TEST_INTAKE:
+      case TEST:
       default:
-        io.setPivotPosition(targetPivotPosition);
+        io.setPivotPosition(targetPivotAngle);
         break;
     }
 
     // AdvantageKit 數據記錄
-    recordOutputs(targetPivotPosition, rollerVolts);
+    recordOutputs(targetPivotAngle, rollerVolts);
   }
 
   private double calculateRollerVolts() {
@@ -112,6 +114,7 @@ public final class Intake extends SubsystemBase {
         return configuration.alwaysOnVolts() * 0.5;
       case TEST_ROLLER:
       case TEST_INTAKE:
+      case TEST:
         return intakeTestVoltage;
       case HOMING:
       case HOME:
@@ -121,9 +124,9 @@ public final class Intake extends SubsystemBase {
     }
   }
 
-  private void recordOutputs(Position targetPivotPosition, double rollerVolts) {
+  private void recordOutputs(Angle targetPivotAngle, double rollerVolts) {
     Logger.recordOutput("Intake/WantedState", wantedState.name());
-    Logger.recordOutput("Intake/TargetPivotPosition", targetPivotPosition.name());
+    Logger.recordOutput("Intake/TargetPivotPosition", targetPivotAngle);
     Logger.recordOutput("Intake/CommandedAlwaysOnVolts", rollerVolts);
     Logger.recordOutput("Intake/IsHomed", isHomed);
 
@@ -146,8 +149,8 @@ public final class Intake extends SubsystemBase {
     this.overridePivotPosition = false;
   }
 
-  public void setCustomPivotPosition(Position position) {
-    this.customPivotPosition = position;
+  public void setCustomPivotPosition(Angle angle) {
+    this.customPivotAngle = angle;
     this.overridePivotPosition = true;
   }
 

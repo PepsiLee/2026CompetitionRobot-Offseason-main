@@ -1,6 +1,6 @@
 package frc.robot.subsystems.vision;
 
-
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.util.Units;
 import frc.robot.LimelightHelpers;
@@ -26,7 +26,7 @@ public final class VisionIOLimelightHelper implements VisionIO {
 
     final PoseEstimate poseEstimate_MegaTag1 = LimelightHelpers.getBotPoseEstimate_wpiBlue(name);
     final PoseEstimate poseEstimate_MegaTag2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(name);
-    
+
     inputs.heartbeat = LimelightHelpers.getHeartbeat(name);
 
     if (poseEstimate_MegaTag1 == null
@@ -36,6 +36,10 @@ public final class VisionIOLimelightHelper implements VisionIO {
       clearMeasurement(inputs);
       return;
     }
+
+    poseEstimate_MegaTag2.pose = new Pose2d(
+        poseEstimate_MegaTag2.pose.getTranslation(),
+        poseEstimate_MegaTag1.pose.getRotation());
 
     inputs.pipelineLatencyMilliseconds = poseEstimate_MegaTag2.latency;
     inputs.tagCount = poseEstimate_MegaTag2.tagCount;

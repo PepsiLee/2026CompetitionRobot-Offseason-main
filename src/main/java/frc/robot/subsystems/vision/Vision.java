@@ -4,6 +4,7 @@ import com.ctre.phoenix6.Utils;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotState;
 import frc.robot.config.VisionConfiguration;
@@ -30,7 +31,7 @@ public final class Vision extends SubsystemBase {
 
   private static final double MAX_MEASUREMENT_AGE_SECONDS = 0.50;
   private static final double RECENT_MEASUREMENT_SECONDS = 1.0;
-  private static final double HEADING_STANDARD_DEVIATION_RADIANS = 1.0e6;
+  private static final double HEADING_STANDARD_DEVIATION_RADIANS = 10.0;
 
   private final RobotState robotState;
   private final Drive drive;
@@ -67,7 +68,7 @@ public final class Vision extends SubsystemBase {
       double xyStandardDeviation = calculateXyStandardDeviation(measurement);
       drive.addVisionMeasurement(
           measurement.pose(),
-          measurement.timestampSeconds(),
+          Utils.fpgaToCurrentTime(measurement.timestampSeconds()),
           VecBuilder.fill(
               xyStandardDeviation,
               xyStandardDeviation,
@@ -81,6 +82,7 @@ public final class Vision extends SubsystemBase {
     Logger.recordOutput("Vision/TagCount", inputs.tagCount);
     Logger.recordOutput("Vision/AverageDistanceMeters", inputs.averageDistanceMeters);
     Logger.recordOutput("Vision/TimestampSeconds", inputs.timestampSeconds);
+    Logger.recordOutput("Vision/ageSeconds", Utils.getCurrentTimeSeconds() - Utils.fpgaToCurrentTime(measurement.timestampSeconds()));
     Logger.recordOutput("Vision/RejectionReason", lastRejectionReason);
     double secondsSinceAcceptedMeasurement = Utils.getCurrentTimeSeconds()
         - robotState.getLastAcceptedVisionTimestampSeconds();
@@ -101,7 +103,7 @@ public final class Vision extends SubsystemBase {
         || measurement.timestampSeconds() <= 0.0) {
       return RejectionReason.INVALID_TIMESTAMP;
     }
-    double ageSeconds = Utils.getCurrentTimeSeconds() - measurement.timestampSeconds();
+    double ageSeconds = Utils.getCurrentTimeSeconds() - Utils.fpgaToCurrentTime(measurement.timestampSeconds());
     if (ageSeconds < -0.05 || ageSeconds > MAX_MEASUREMENT_AGE_SECONDS) {
       return RejectionReason.STALE;
     }
@@ -117,10 +119,10 @@ public final class Vision extends SubsystemBase {
       return RejectionReason.ROTATING_TOO_FAST;
     }
     Pose2d referencePose = drive.samplePoseAt(measurement.timestampSeconds()).orElse(robotState.getPose());
-    if (referencePose.getTranslation().getDistance(measurement.pose().getTranslation()) > configuration
-        .maxPoseJumpMeters()) {
-      return RejectionReason.POSE_JUMP;
-    }
+    // if (referencePose.getTranslation().getDistance(measurement.pose().getTranslation()) > configuration
+    //     .maxPoseJumpMeters()) {
+    //   return RejectionReason.POSE_JUMP;
+    // }
     return RejectionReason.ACCEPTED;
   }
 

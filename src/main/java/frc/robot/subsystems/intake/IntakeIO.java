@@ -24,7 +24,7 @@ public interface IntakeIO {
 
   public default void updateInputs(Inputs inputs) {}
   public default void setRollerVoltages(double volts) {}
-  public default void setPivotPosition(Intake.Position position) {}
+  public default void setPivotPosition(Angle angle) {}
   public default void setPivotVoltage(double volts) {}
   public default void resetPivotEncoder(Angle angle) {}
 }

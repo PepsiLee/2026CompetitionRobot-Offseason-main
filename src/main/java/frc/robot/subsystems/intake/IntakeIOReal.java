@@ -5,7 +5,6 @@ import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volts;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
@@ -22,8 +21,6 @@ import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
-import frc.robot.subsystems.intake.Intake.Position;
-
 import edu.wpi.first.units.measure.Angle;
 import frc.robot.config.IntakeConfiguration;
 
@@ -31,7 +28,6 @@ public final class IntakeIOReal implements IntakeIO {
 
   private final TalonFX intakeMotor;
   private final TalonFX pivotMotor;
-  private final TalonFX[] motors;
   private final VoltageOut alwaysOnRequest = new VoltageOut(0.0);
   private final VoltageOut pivotVoltageRequest = new VoltageOut(0);
   private final MotionMagicVoltage pivotMotionMagicRequest = new MotionMagicVoltage(0.0).withSlot(0);
@@ -44,7 +40,6 @@ public final class IntakeIOReal implements IntakeIO {
 
     intakeMotor = new TalonFX(configuration.alwaysOnMotorCanId(), canBus);
     pivotMotor = new TalonFX(configuration.circleMotorCanId(), canBus);
-    motors = new TalonFX[] { intakeMotor, pivotMotor };
     TalonFXConfiguration motorConfiguration = new TalonFXConfiguration();
 
     motorConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
@@ -113,10 +108,10 @@ public final class IntakeIOReal implements IntakeIO {
     intakeMotor.setControl(alwaysOnRequest.withOutput(rollerVolts));
   }
 
-  public void setPivotPosition(Position position) {
+  public void setPivotPosition(Angle position) {
     pivotMotor.setControl(
         pivotMotionMagicRequest
-            .withPosition(position.angle()));
+            .withPosition(position));
   }
 
   @Override

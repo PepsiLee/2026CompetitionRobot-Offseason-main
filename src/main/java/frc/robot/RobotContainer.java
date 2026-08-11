@@ -91,10 +91,6 @@ public class RobotContainer {
 
   private void configureBindings() {
 
-    // Homing when test mode
-    // TODO : AFTER check ok change to auto
-    RobotModeTriggers.test().onTrue(intake.homingCommand());
-
     drive.setDefaultCommand(
         drive.run(
             () -> drive.acceptTeleopInput(

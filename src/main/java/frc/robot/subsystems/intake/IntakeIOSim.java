@@ -50,8 +50,8 @@ public final class IntakeIOSim implements IntakeIO {
   }
 
   @Override
-  public void setPivotPosition(Intake.Position position) {
-    this.pivotPositionDegrees = position.angle().in(edu.wpi.first.units.Units.Degrees);
+  public void setPivotPosition(Angle position) {
+    this.pivotPositionDegrees = position.in(edu.wpi.first.units.Units.Degrees);
     this.pivotCommandedVolts = 0.0;
   }
 
