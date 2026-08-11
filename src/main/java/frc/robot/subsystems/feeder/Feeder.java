@@ -8,12 +8,14 @@ public final class Feeder extends SubsystemBase {
   public enum WantedState {
     OFF,
     FEED_SHOOTER,  // 推彈進 Shooter 進行射擊
-    EJECT          // 反轉
+    EJECT,          // 反轉
+    TEST_SHOOTER    // 測試 Shooter
   }
 
   private final FeederIO io;
   private final FeederIO.Inputs inputs = new FeederIO.Inputs();
   private final FeederConfiguration configuration;
+  private double voltage = 0.0;
 
   private WantedState wantedState = WantedState.OFF;
 
@@ -29,6 +31,7 @@ public final class Feeder extends SubsystemBase {
     double commandedVolts = 0.0;
 
     switch (wantedState) {
+      case TEST_SHOOTER -> commandedVolts = voltage;
       case FEED_SHOOTER -> commandedVolts = configuration.feedToShooterVolts();
       case EJECT -> commandedVolts = configuration.ejectVolts();
       case OFF -> commandedVolts = 0.0;
@@ -56,5 +59,9 @@ public final class Feeder extends SubsystemBase {
 
   public WantedState getWantedState() {
     return wantedState;
+  }
+
+  public void setVoltage(double voltage) {
+    this.voltage = voltage;
   }
 }

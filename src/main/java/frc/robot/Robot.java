@@ -8,6 +8,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import org.ironmaple.simulation.SimulatedArena;
@@ -48,10 +49,6 @@ public class Robot extends LoggedRobot {
   @Override
   public void robotPeriodic() {
     CommandScheduler.getInstance().run();
-
-    if (RobotBase.isSimulation() && Constants.useMapleSim) {
-      m_robotContainer.getSimulatedRobotState().updateSim();
-    }
   }
 
   @Override
@@ -61,10 +58,12 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+  }
 
   @Override
-  public void disabledExit() {}
+  public void disabledExit() {
+  }
 
   @Override
   public void autonomousInit() {
@@ -85,17 +84,20 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+  }
 
   @Override
-  public void autonomousExit() {}
+  public void autonomousExit() {
+  }
 
   @Override
   public void teleopInit() {
+    // Stop the autonomous command
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
-
+    // Ininitlize the simulation
     if (RobotBase.isSimulation() && Constants.useMapleSim && !hasEnabled) {
       SimulatedArena.getInstance().placeGamePiecesOnField();
     }
@@ -109,31 +111,65 @@ public class Robot extends LoggedRobot {
   }
 
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
+  }
 
   @Override
-  public void teleopExit() {}
+  public void teleopExit() {
+  }
 
   @Override
   public void testInit() {
     CommandScheduler.getInstance().cancelAll();
     m_robotContainer.getSuperStructure().stopAll();
     m_robotContainer.getDrive().stop();
+
+    SmartDashboard.setDefaultBoolean("Feeder/On", false);
+    SmartDashboard.setDefaultBoolean("Shooter/On", false);
+    SmartDashboard.setDefaultBoolean("Intake/On", false);
+
+    SmartDashboard.setDefaultNumber("Feeder/Target Voltage", 0.0);
+    SmartDashboard.setDefaultNumber("Shooter/Target RPM", 0.0);
+    SmartDashboard.setDefaultNumber("Intake/Target Voltage", 0.0);
+    SmartDashboard.setDefaultNumber("Intake Pivot/Target Voltage", 0.0);
+    m_robotContainer.getIntake().setVoltage(0, 0);
   }
 
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {
+    double targetRPM = SmartDashboard.getNumber("Shooter/Target RPM", 0.0);
+    double targetVoltage = SmartDashboard.getNumber("Feeder/Target Voltage", 0.0);
+    double intakeTargetVoltage = SmartDashboard.getNumber("Intake/Target Voltage", 0.0);
+    double intakePivotTargetVoltage = SmartDashboard.getNumber("Intake Pivot/Target Voltage", 0.0);
+
+    boolean shooter = SmartDashboard.getBoolean("Shooter/On", false);
+    boolean feeder = SmartDashboard.getBoolean("Feeder/On", false);
+    boolean intake = SmartDashboard.getBoolean("Intake/On", false);
+
+    m_robotContainer.getShooter().setWantedState(shooter ? frc.robot.subsystems.shooter.Shooter.WantedState.SHOOTING
+        : frc.robot.subsystems.shooter.Shooter.WantedState.OFF);
+    m_robotContainer.getShooter().setRPM(targetRPM);
+    m_robotContainer.getFeeder().setWantedState(feeder ? frc.robot.subsystems.feeder.Feeder.WantedState.TEST_SHOOTER
+        : frc.robot.subsystems.feeder.Feeder.WantedState.OFF);
+    m_robotContainer.getFeeder().setVoltage(targetVoltage);
+    m_robotContainer.getIntake().setWantedState(intake ? frc.robot.subsystems.intake.Intake.WantedState.OFF
+        : frc.robot.subsystems.intake.Intake.WantedState.STOPPED);
+    m_robotContainer.getIntake().setVoltage(intakeTargetVoltage, intakePivotTargetVoltage);
+  }
 
   @Override
-  public void testExit() {}
+  public void testExit() {
+    m_robotContainer.getSuperStructure().stopAll();
+    m_robotContainer.getDrive().stop();
+  }
 
   @Override
   public void simulationPeriodic() {
-    if (RobotBase.isSimulation() && Constants.useMapleSim && !hasEnabled) {
+    if (Constants.useMapleSim) {
+      m_robotContainer.getSimulatedRobotState().updateSim();
       Logger.recordOutput(
           "FieldSimulation/Fuel",
           SimulatedArena.getInstance().getGamePiecesArrayByType("Fuel"));
     }
-
-  } 
+  }
 }

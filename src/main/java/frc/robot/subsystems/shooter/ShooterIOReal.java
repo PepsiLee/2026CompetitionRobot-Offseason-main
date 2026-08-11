@@ -9,10 +9,12 @@ import java.util.List;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.configs.VoltageConfigs;
+import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -24,15 +26,15 @@ import frc.robot.Constants.KrakenX60;
 import frc.robot.config.ShooterConfiguration;
 
 public final class ShooterIOReal implements ShooterIO {
-  // TODO: Move to the constant File
   private static final AngularVelocity kVelocityTolerance = RPM.of(100);
+  private final ShooterConfiguration configuration;
   private final TalonFX shootOne, shootTwo;
   private final List<TalonFX> motors;
   private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
+  private final MotionMagicVelocityVoltage motionMagicVelocityVoltage = new MotionMagicVelocityVoltage(0);
   private final VoltageOut voltageRequest = new VoltageOut(0);
 
   public ShooterIOReal(ShooterConfiguration configuration) {
-    // TODO: Optimizer this reduntant writing
     CANBus canBus = configuration.canBus().isBlank()
         ? CANBus.roboRIO()
         : new CANBus(configuration.canBus());
@@ -41,9 +43,9 @@ public final class ShooterIOReal implements ShooterIO {
     shootTwo = new TalonFX(configuration.shootTwoCanId(), canBus);
     motors = List.of(shootOne, shootTwo);
 
-    // TODO: Check the motor's Direction
     configureMotor(shootOne, InvertedValue.Clockwise_Positive);
     configureMotor(shootTwo, InvertedValue.CounterClockwise_Positive);
+    this.configuration = configuration;
   }
 
   private void configureMotor(TalonFX motor, InvertedValue invertDirection) {
@@ -62,12 +64,15 @@ public final class ShooterIOReal implements ShooterIO {
                 .withSupplyCurrentLimit(Amps.of(70))
                 .withSupplyCurrentLimitEnable(true))
         .withSlot0(
-            // TODO: Tune the PID value
             new Slot0Configs()
                 .withKP(0.5)
                 .withKI(0)
                 .withKD(0)
-                .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond)) // 12 volts when requesting max RPS
+                .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond))
+        ).withMotionMagic(
+            new MotionMagicConfigs()
+                .withMotionMagicAcceleration(250) // rps^2
+                .withMotionMagicJerk(1500) // rps^3
         );
 
     motor.getConfigurator().apply(config);
@@ -87,10 +92,10 @@ public final class ShooterIOReal implements ShooterIO {
   }
 
   public void setRPM(double rpm) {
+    rpm = rpm / configuration.gearRatio();
     for (final TalonFX motor : motors) {
       motor.setControl(
-          velocityRequest
-              .withVelocity(RPM.of(rpm)));
+          motionMagicVelocityVoltage.withVelocity(RPM.of(rpm)));
     }
   }
 
