@@ -31,7 +31,7 @@ import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterIOReal;
 import frc.robot.subsystems.shooter.ShooterIOSim;
 import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionIOLimelight;
+import frc.robot.subsystems.vision.VisionIOLimelightHelper;
 
 public class RobotContainer {
   private final RobotConfiguration configuration = RobotConfiguration.competitionRobot();
@@ -75,7 +75,7 @@ public class RobotContainer {
         robotState,
         drive,
         configuration.vision(),
-        new VisionIOLimelight(configuration.vision()));
+        new VisionIOLimelightHelper(configuration.vision()));
     autoFactory = new AutoFactory(drive, superStructure);
 
     if (RobotBase.isSimulation() && Constants.useMapleSim) {

@@ -6,12 +6,10 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotState;
 import frc.robot.constants.FieldConstants;
-import frc.robot.simulation.SimulatedRobotState;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.feeder.Feeder;
 import frc.robot.subsystems.intake.Intake;
@@ -40,6 +38,7 @@ public final class SuperStructure extends SubsystemBase {
   private static final double AIM_MAX_ANGULAR_SPEED_RADIANS_PER_SECOND = Units.degreesToRadians(15.0);
   private static final double AIM_STABLE_SECONDS = 0.10;
 
+  // subsystem references
   private final Drive drive;
   private final RobotState robotState;
   private final Intake intake;
@@ -47,12 +46,12 @@ public final class SuperStructure extends SubsystemBase {
   private final Feeder feeder;
 
   private final Debouncer aimReadyDebouncer = new Debouncer(AIM_STABLE_SECONDS, Debouncer.DebounceType.kRising);
-
+  // Flags for requested actions
   private boolean intakeRequested;
   private boolean shootRequested;
   private boolean directShootRequested;
   private boolean stopped;
-
+  // Current state of the superstructure
   private SystemState systemState = SystemState.IDLE;
   private Rotation2d desiredAimHeading = Rotation2d.kZero;
   private Rotation2d lockedShotHeading = Rotation2d.kZero;
@@ -97,13 +96,13 @@ public final class SuperStructure extends SubsystemBase {
       aimReadyDebouncer.calculate(false);
       return SystemState.DIRECT_SHOOTING;
     }
-    // Trigger Shoot!
+    // Shoot request
     if (!shootRequested) {
       faultReason = "";
       aimReadyDebouncer.calculate(false);
       return intakeRequested ? SystemState.INTAKING : SystemState.IDLE;
     }
-    // Check aimming or ready to shoot
+    // Check if we are already shooting and if we are still aimed at the target
     if (systemState == SystemState.SHOOTING) {
       if (Math.abs(drive.getHeadingErrorRadians(lockedShotHeading)) > AIM_EXIT_TOLERANCE_RADIANS) {
         aimReadyDebouncer.calculate(false);
@@ -111,11 +110,11 @@ public final class SuperStructure extends SubsystemBase {
       }
       return SystemState.SHOOTING;
     }
-    // Check ?
+
     drive.requestAimStationary(desiredAimHeading);
-    boolean rawAimReady = drive.isAtHeading(desiredAimHeading, AIM_ENTER_TOLERANCE_RADIANS)
+    boolean aimReady = drive.isAtHeading(desiredAimHeading, AIM_ENTER_TOLERANCE_RADIANS)
         && Math.abs(drive.getAngularVelocityRadiansPerSecond()) <= AIM_MAX_ANGULAR_SPEED_RADIANS_PER_SECOND;
-    if (!aimReadyDebouncer.calculate(rawAimReady)) {
+    if (!aimReadyDebouncer.calculate(aimReady)) {
       return SystemState.AIMING;
     }
 
@@ -146,7 +145,7 @@ public final class SuperStructure extends SubsystemBase {
         drive.releaseAim();
       }
       case AIMING -> {
-        shooter.setWantedState(Shooter.WantedState.OFF);
+        shooter.setWantedState(Shooter.WantedState.SHOOTING);
         feeder.setWantedState(Feeder.WantedState.OFF);
         drive.requestAimStationary(desiredAimHeading);
       }
@@ -161,8 +160,7 @@ public final class SuperStructure extends SubsystemBase {
         drive.requestAimStationary(lockedShotHeading);
       }
       case DIRECT_SHOOTING -> {
-        shooter.setRPM(3000);
-        // shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
+        shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
         if (shooter.isReady()) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);

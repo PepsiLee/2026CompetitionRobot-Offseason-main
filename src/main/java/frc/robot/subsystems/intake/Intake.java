@@ -28,9 +28,7 @@ public final class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    //TODO: remove this 
     boolean runAlwaysOnMotor = wantedState != WantedState.STOPPED;
-
     double alwaysOnVolts = runAlwaysOnMotor ? configuration.alwaysOnVolts() : 0.0;
 
     double circleMotorVolts = wantedState == WantedState.INTAKE ? configuration.circleMotorVolts() : 0.0;
@@ -54,5 +52,9 @@ public final class Intake extends SubsystemBase {
 
   public WantedState getWantedState() {
     return wantedState;
+  }
+
+  public void setVoltage(double alwaysOnVolts, double circleMotorVolts) {
+    io.setVoltages(alwaysOnVolts, circleMotorVolts);
   }
 }

@@ -12,8 +12,8 @@ public final class IntakeIOReal implements IntakeIO {
   private final TalonFX alwaysOnMotor;
   private final TalonFX circleMotor;
   private final TalonFX[] motors;
-  private final VoltageOut alwaysOnRequest = new VoltageOut(0.0).withEnableFOC(false);
-  private final VoltageOut circleRequest = new VoltageOut(0.0).withEnableFOC(false);
+  private final VoltageOut alwaysOnRequest = new VoltageOut(0.0);
+  private final VoltageOut circleRequest = new VoltageOut(0.0);
 
   public IntakeIOReal(IntakeConfiguration configuration) {
     CANBus canBus =

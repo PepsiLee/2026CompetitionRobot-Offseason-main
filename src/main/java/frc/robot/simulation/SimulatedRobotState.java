@@ -19,9 +19,6 @@ import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.ironmaple.simulation.seasonspecific.rebuilt2026.RebuiltFuelOnFly;
 
 import org.littletonrobotics.junction.Logger;
-import edu.wpi.first.wpilibj.Timer;
-
-
 
 /**
  * Stores and manages Maple-Sim ground-truth robot state, following 2910's

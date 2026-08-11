@@ -22,7 +22,7 @@ import edu.wpi.first.wpilibj.RobotBase;
  * project.
  */
 public final class CompetitionRobotConfig implements RobotConfiguration {
-    private static final String CAN_BUS = RobotBase.isSimulation() ? "*" : "rio";
+    private static final String CAN_BUS = RobotBase.isSimulation() ? "*" : "canivore";
 
     private static final int PIGEON_ID = 0;
 
@@ -107,10 +107,9 @@ public final class CompetitionRobotConfig implements RobotConfiguration {
                 31,
                 -7.0,
                 7.0,
-                7.0,
-                1.0,
                 35.0,
-                60.0);
+                60.0,
+                1.222);
 
         // Provisional rear-facing transform. Replace with a measured robot-to-camera
         // transform.
@@ -118,7 +117,7 @@ public final class CompetitionRobotConfig implements RobotConfiguration {
                 "limelight-rear",
                 // TODO: Need to be check in the CAD
                 new Transform3d(
-                        new Translation3d(-0.25, 0.0, 0.55),
+                        new Translation3d(-0.332486, 0.0, 0.171958),
                         new Rotation3d(0.0, 0.0, Math.PI)),
                 6.0,
                 720.0,

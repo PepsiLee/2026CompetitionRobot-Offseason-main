@@ -144,7 +144,7 @@ class AutoFactorySimulationTest {
 
   private static ShooterConfiguration shooterConfiguration() {
     return new ShooterConfiguration(
-        "", 30, 31, -7.0, 7.0, 7.0, 1.0, 35.0, 60.0);
+        "", 30, 31, -7.0, 7.0, 35.0, 60.0, 1.222);
   }
 
   private static final class FakeDriveIO implements DriveIO {

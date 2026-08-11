@@ -32,17 +32,12 @@ public final class Drive extends SubsystemBase {
     DRIVE_TO_POSE,
     STOPPED
   }
-
-  // TODO: move this field to the constant file
   private static final double JOYSTICK_DEADBAND = 0.10;
   private static final double TELEOP_TRANSLATION_SCALE = 0.4;
   private static final double TELEOP_ROTATION_SCALE = 0.2;
   private static final double SETPOINT_STABLE_TIME_SECONDS = 0.10;
-
-  // Why there is a robot state here?
   private final RobotState robotState;
   private final DriveIO io;
-  // ?
   private final DriveIO.DriveIOInputs inputs = new DriveIO.DriveIOInputs();
   private final Field2d field = new Field2d();
   private final double maxLinearSpeedMetersPerSecond;
