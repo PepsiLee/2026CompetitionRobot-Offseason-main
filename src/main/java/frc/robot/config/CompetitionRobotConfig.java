@@ -35,9 +35,9 @@ public final class CompetitionRobotConfig implements RobotConfiguration {
     // Measured in Soildwork
     private static final double WHEELBASE_METERS = Units.inchesToMeters(22.25);
     private static final double TRACK_WIDTH_METERS = Units.inchesToMeters(22.25);
-    // FIXME: Unknown Source
-    private static final double SPEED_AT_12_VOLTS_METERS_PER_SECOND = 5.12;
-    private static final double MAX_LINEAR_SPEED_METERS_PER_SECOND = 5.12;
+    // Measured with Phoenix Tuner X Swerve Tuner Verification (Drive).
+    private static final double SPEED_AT_12_VOLTS_METERS_PER_SECOND = 4.6519;
+    private static final double MAX_LINEAR_SPEED_METERS_PER_SECOND = 4.6519;
 
     // Order is always front-left, front-right, back-left, back-right.
     private static final ModuleHardware FRONT_LEFT = new ModuleHardware(1, 2, 11, 0.094482421875, false);
