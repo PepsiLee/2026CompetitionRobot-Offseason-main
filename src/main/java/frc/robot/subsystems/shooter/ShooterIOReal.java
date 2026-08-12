@@ -29,7 +29,7 @@ import frc.robot.Constants.KrakenX60;
 import frc.robot.config.ShooterConfiguration;
 
 public final class ShooterIOReal implements ShooterIO {
-  private static final AngularVelocity kVelocityTolerance = RPM.of(100);
+  private static final AngularVelocity kVelocityTolerance = RPM.of(150);
   private final ShooterConfiguration configuration;
   private final TalonFX shootOne, shootTwo;
   private final List<TalonFX> motors;
@@ -67,7 +67,7 @@ public final class ShooterIOReal implements ShooterIO {
                 .withSupplyCurrentLimitEnable(true))
         .withSlot0(
             new Slot0Configs()
-                .withKP(0.5)
+                .withKP(0.3)
                 .withKI(0)
                 .withKD(0)
                 .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond)))
@@ -122,6 +122,7 @@ public final class ShooterIOReal implements ShooterIO {
       SmartDashboard.putBoolean("Shooter/isInVelocityMode", isInVelocityMode);
       SmartDashboard.putString("Shooter/currentVelocity", motor.getVelocity().getValue().toString());
       SmartDashboard.putString("Shooter/targetVelocity", motionMagicVelocityVoltage.getVelocityMeasure().toString());
+      SmartDashboard.putBoolean("Shooter/isVelocityWithinTolerance", isInVelocityMode && currentVelocity.isNear(targetVelocity, kVelocityTolerance));
       return isInVelocityMode && currentVelocity.isNear(targetVelocity, kVelocityTolerance);
     });
   }

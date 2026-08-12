@@ -37,7 +37,7 @@ public final class SuperStructure extends SubsystemBase {
   private static final double AIM_EXIT_TOLERANCE_RADIANS = Units.degreesToRadians(6.0);
   private static final double AIM_MAX_ANGULAR_SPEED_RADIANS_PER_SECOND = Units.degreesToRadians(15.0);
   private static final double AIM_STABLE_SECONDS = 0.10;
-
+  private static final double SPEED_STABLE_SECONDS = 0.20;
   // subsystem references
   private final Drive drive;
   private final RobotState robotState;
@@ -46,6 +46,7 @@ public final class SuperStructure extends SubsystemBase {
   private final Feeder feeder;
 
   private final Debouncer aimReadyDebouncer = new Debouncer(AIM_STABLE_SECONDS, Debouncer.DebounceType.kRising);
+  private final Debouncer speedReadyDebouncer = new Debouncer(SPEED_STABLE_SECONDS, Debouncer.DebounceType.kRising);
   // Flags for requested actions
   private boolean intakeRequested;
   private boolean shootRequested;
@@ -102,6 +103,7 @@ public final class SuperStructure extends SubsystemBase {
       aimReadyDebouncer.calculate(false);
       return intakeRequested ? SystemState.INTAKING : SystemState.IDLE;
     }
+
     // Check if we are already shooting and if we are still aimed at the target
     if (systemState == SystemState.SHOOTING) {
       if (Math.abs(drive.getHeadingErrorRadians(lockedShotHeading)) > AIM_EXIT_TOLERANCE_RADIANS) {
@@ -130,7 +132,8 @@ public final class SuperStructure extends SubsystemBase {
       intake.setWantedState(Intake.WantedState.STOP);
     } else {
       intake.setWantedState(
-          intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.STOP);
+          // TODO: FIX THIS
+          intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.INTAKE);
     }
 
     switch (systemState) {
@@ -152,7 +155,7 @@ public final class SuperStructure extends SubsystemBase {
       case SHOOTING -> {
         shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
-        if (shooter.isReady()) {
+        if (speedReadyDebouncer.calculate(shooter.isReady())) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);
         } else {
           feeder.setWantedState(Feeder.WantedState.OFF);
@@ -162,7 +165,7 @@ public final class SuperStructure extends SubsystemBase {
       case DIRECT_SHOOTING -> {
         shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
-        if (shooter.isReady()) {
+        if (speedReadyDebouncer.calculate(shooter.isReady())) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);
         } else {
           feeder.setWantedState(Feeder.WantedState.OFF);

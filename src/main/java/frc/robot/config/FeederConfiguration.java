@@ -13,7 +13,6 @@ package frc.robot.config;
 public record FeederConfiguration(
         String canBus,
         int feederMotorCanId,
-        double intakeVolts,
         double ejectVolts,
         double feedToShooterVolts,
         double currentLimitAmps) {

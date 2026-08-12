@@ -4,7 +4,8 @@ package frc.robot.config;
 public record IntakeConfiguration(
         String canBus,
         int alwaysOnMotorCanId,
-        int circleMotorCanId,
+        int pivotRMotorCanId,
+        int pivotLMotorCanId,
         double alwaysOnVolts,
         double circleMotorVolts,
         double supplyCurrentLimitAmps,

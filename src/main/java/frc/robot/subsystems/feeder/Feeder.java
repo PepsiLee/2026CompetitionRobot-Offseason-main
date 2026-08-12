@@ -40,7 +40,7 @@ public final class Feeder extends SubsystemBase {
     if (wantedState == WantedState.OFF) {
       io.stop();
     } else {
-      io.setVoltage(commandedVolts);
+      io.setVoltage(commandedVolts); // 6000 rpm / 12 volts / 60 sec
     }
 
     // Logger 紀錄

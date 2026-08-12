@@ -94,8 +94,8 @@ public class RobotContainer {
     drive.setDefaultCommand(
         drive.run(
             () -> drive.acceptTeleopInput(
-                driverController.getLeftY(),
-                driverController.getLeftX(),
+                -driverController.getLeftY(),
+                -driverController.getLeftX(),
                 -driverController.getRightX()))
             .withName("Drive Field Relative"));
 

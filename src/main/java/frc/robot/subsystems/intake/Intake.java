@@ -78,11 +78,9 @@ public final class Intake extends SubsystemBase {
   public void periodic() {
     io.updateInputs(inputs);
 
-    // 1. 計算滾輪電壓 (Roller Voltage)
     double rollerVolts = calculateRollerVolts();
     io.setRollerVoltages(rollerVolts);
 
-    // 2. 依據狀態機決定 Pivot 控制模式
     Angle targetPivotAngle = overridePivotPosition ? customPivotAngle : wantedState.getTargetPosition().angle();
 
     switch (wantedState) {
@@ -98,11 +96,10 @@ public final class Intake extends SubsystemBase {
       case TEST_INTAKE:
       case TEST:
       default:
-        io.setPivotPosition(targetPivotAngle);
+        // io.setPivotPosition(targetPivotAngle);
         break;
     }
 
-    // AdvantageKit 數據記錄
     recordOutputs(targetPivotAngle, rollerVolts);
   }
 
