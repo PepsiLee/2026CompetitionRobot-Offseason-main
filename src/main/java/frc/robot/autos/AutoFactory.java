@@ -112,7 +112,7 @@ public final class AutoFactory {
     return new AutoRoutine(startingPose, routine);
   }
 
-  private AutoRoutine createBLineShoot(Alliance alliance) {
+private AutoRoutine createBLineShoot(Alliance alliance) {
     if (shootPath == null) {
       Command safeFailure = Commands.runOnce(
           () -> {
@@ -126,13 +126,15 @@ public final class AutoFactory {
       return new AutoRoutine(Pose2d.kZero, safeFailure);
     }
 
-    boolean shouldFlip = alliance == Alliance.Red;
-    Path transformedPath = shootPath.copy();
-    if (shouldFlip) {
-      transformedPath.flip();
-    }
-    Pose2d startingPose = transformedPath.getStartPose();
+    boolean shouldFlip = (alliance == Alliance.Red);
 
+    // 1. 計算給 AutoRoutine / Logger 使用的初始 Pose
+    // 使用 BLine 的 FlippingUtil 取得紅隊對應的起點
+    Pose2d startingPose = shouldFlip 
+        ? FlippingUtil.flipFieldPose(shootPath.getStartPose()) 
+        : shootPath.getStartPose();
+
+    // 2. 直接傳入原始 shootPath，讓 Builder 全權處理 Flip 與 PoseReset
     Command followPath = new FollowPath.Builder(
         drive,
         drive::getPose,
@@ -143,8 +145,8 @@ public final class AutoFactory {
         new PIDController(2.0, 0.0, 0.0))
         .withShouldFlip(() -> shouldFlip)
         .withShouldMirror(() -> false)
-        .withPoseReset(drive::resetPose)
-        .build(shootPath);
+        .withPoseReset(drive::resetPose) // BLine 會在 Command 啟動時自動重置 Odometry 到正確起點
+        .build(shootPath); // 傳入原始未翻轉的 shootPath
 
     Command routine = Commands.sequence(
         resetForAuto(startingPose),
@@ -155,9 +157,6 @@ public final class AutoFactory {
               Logger.recordOutput("Auto/BLine/ShouldMirror", false);
               Logger.recordOutput("Auto/BLine/ReachedFinalPoint", false);
               Logger.recordOutput("Auto/BLine/StartingPose", startingPose);
-              Logger.recordOutput(
-                  "Auto/BLine/ActivePathPoints",
-                  transformedPath.getTranslations().toArray(Translation2d[]::new));
             }),
         followPath,
         Commands.runOnce(
@@ -178,8 +177,9 @@ public final class AutoFactory {
               Logger.recordOutput("Auto/BLine/ReachedFinalPoint", false);
             })
         .withName(AutoMode.BLINE_SHOOT.name());
+
     return new AutoRoutine(startingPose, routine);
-  }
+}
 
   private Command resetForAuto(Pose2d startingPose) {
     return Commands.runOnce(
