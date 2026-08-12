@@ -128,12 +128,14 @@ public final class SuperStructure extends SubsystemBase {
   }
 
   private void applyState() {
+
     if (systemState == SystemState.FAULT || systemState == SystemState.STOPPED) {
-      intake.setWantedState(Intake.WantedState.STOP);
+      intake.setWantedState(Intake.WantedState.STOPPED);
     } else {
-      intake.setWantedState(
-          // TODO: FIX THIS
-          intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.INTAKE);
+      if (intake.getWantedState() != Intake.WantedState.DEPLOY) {
+        intake.setWantedState(
+            intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.ONLY_ROLLER);
+      }
     }
 
     switch (systemState) {
@@ -218,7 +220,7 @@ public final class SuperStructure extends SubsystemBase {
     directShootRequested = false;
     stopped = true;
     systemState = SystemState.STOPPED;
-    intake.setWantedState(Intake.WantedState.STOP);
+    intake.setWantedState(Intake.WantedState.STOPPED);
     shooter.setWantedState(Shooter.WantedState.OFF);
     feeder.setWantedState(Feeder.WantedState.OFF);
     drive.stop();
@@ -229,7 +231,7 @@ public final class SuperStructure extends SubsystemBase {
     faultReason = "";
     systemState = intakeRequested ? SystemState.INTAKING : SystemState.IDLE;
     intake.setWantedState(
-        intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.STOP);
+        intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.STOPPED);
     shooter.setWantedState(Shooter.WantedState.OFF);
     feeder.setWantedState(Feeder.WantedState.OFF);
     drive.releaseAim();

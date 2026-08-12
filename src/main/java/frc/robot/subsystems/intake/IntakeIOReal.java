@@ -31,10 +31,9 @@ public final class IntakeIOReal implements IntakeIO {
   private final TalonFX intakeMotor;
   // pivotMotorR 為 Master，pivotMotorL 為 Follower
   private final TalonFX pivotMotorL, pivotMotorR;
+  private final TalonFX[] motors;
   private final VoltageOut alwaysOnRequest = new VoltageOut(0.0);
   private final VoltageOut pivotVoltageRequest = new VoltageOut(0);
-  private final MotionMagicVoltage pivotMotionMagicRequest = new MotionMagicVoltage(0.0).withSlot(0);
-  private static final Angle kPositionTolerance = Degrees.of(3);
 
   public IntakeIOReal(IntakeConfiguration configuration) {
     CANBus canBus = configuration.canBus().isBlank()
@@ -44,6 +43,7 @@ public final class IntakeIOReal implements IntakeIO {
     intakeMotor = new TalonFX(configuration.alwaysOnMotorCanId(), canBus);
     pivotMotorL = new TalonFX(configuration.pivotLMotorCanId(), canBus);
     pivotMotorR = new TalonFX(configuration.pivotRMotorCanId(), canBus);
+    motors = new TalonFX[] { intakeMotor, pivotMotorL, pivotMotorR };
 
     TalonFXConfiguration motorConfiguration = new TalonFXConfiguration();
     motorConfiguration.MotorOutput.NeutralMode = NeutralModeValue.Coast;
@@ -108,49 +108,22 @@ public final class IntakeIOReal implements IntakeIO {
 
   @Override
   public void updateInputs(Inputs inputs) {
-    // 1. Roller (Intake Roller) 數據更新
-    inputs.rollerConnected = intakeMotor.getVersion().getStatus().isOK();
-    inputs.rollerVelocityRotationsPerSecond = intakeMotor.getVelocity().getValueAsDouble();
-    inputs.rollerAppliedVolts = intakeMotor.getMotorVoltage().getValueAsDouble();
-    inputs.rollerSupplyCurrentAmps = intakeMotor.getSupplyCurrent().getValueAsDouble();
-    inputs.rollerStatorCurrentAmps = intakeMotor.getStatorCurrent().getValueAsDouble();
-    inputs.rollerTempCelsius = intakeMotor.getDeviceTemp().getValueAsDouble();
-
-    // 2. Pivot 馬達數據更新 (讀取 Master: pivotMotorR)
-    inputs.pivotConnected = pivotMotorR.getVersion().getStatus().isOK() && pivotMotorL.getVersion().getStatus().isOK();
-    inputs.pivotPositionDegrees = pivotMotorR.getPosition().getValue().in(Degrees);
-    inputs.pivotVelocityRotationsPerSecond = pivotMotorR.getVelocity().getValueAsDouble();
-    inputs.pivotAppliedVolts = pivotMotorR.getMotorVoltage().getValueAsDouble();
-    inputs.pivotSupplyCurrentAmps = pivotMotorR.getSupplyCurrent().getValueAsDouble();
-    inputs.pivotStatorCurrentAmps = pivotMotorR.getStatorCurrent().getValueAsDouble();
-    inputs.pivotTempCelsius = pivotMotorR.getDeviceTemp().getValueAsDouble();
+    for (int i = 0; i < motors.length; i++) {
+      TalonFX motor = motors[i];
+      inputs.connected[i] = motor.getVersion().getStatus().isOK();
+      inputs.velocityRotationsPerSecond[i] = motor.getVelocity().getValueAsDouble();
+      inputs.appliedVolts[i] = motor.getMotorVoltage().getValueAsDouble();
+      inputs.supplyCurrentAmps[i] = motor.getSupplyCurrent().getValueAsDouble();
+      inputs.statorCurrentAmps[i] = motor.getStatorCurrent().getValueAsDouble();
+      inputs.temperatureCelsius[i] = motor.getDeviceTemp().getValueAsDouble();
+    }
   }
 
   @Override
-  public void setRollerVoltages(double rollerVolts) {
+  public void setVoltages(double rollerVolts, double pivotMotor) {
     intakeMotor.setControl(alwaysOnRequest.withOutput(rollerVolts));
-  }
-
-  public void setPivotPosition(Angle position) {
     pivotMotorR.setControl(
-        pivotMotionMagicRequest
-            .withPosition(position));
-  }
-
-  @Override
-  public void setPivotVoltage(double volts) {
-    pivotMotorR.setControl(pivotVoltageRequest.withOutput(volts));
-  }
-
-  @Override
-  public void resetPivotEncoder(Angle angle) {
-    pivotMotorR.setPosition(angle);
-    pivotMotorL.setPosition(angle);
-  }
-
-  private boolean isPositionWithinTolerance() {
-    final Angle currentPosition = pivotMotorR.getPosition().getValue();
-    final Angle targetPosition = pivotMotionMagicRequest.getPositionMeasure();
-    return currentPosition.isNear(targetPosition, kPositionTolerance);
+        pivotVoltageRequest
+            .withOutput(pivotMotor));
   }
 }

@@ -14,11 +14,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.FieldConstants;
-import frc.robot.subsystems.intake.Intake.Position;
 import frc.robot.util.ShooterCalculator;
 
-import static edu.wpi.first.units.Units.Degree;
-import static edu.wpi.first.units.Units.Degrees;
 
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -151,7 +148,7 @@ public class Robot extends LoggedRobot {
     double targetRPM = SmartDashboard.getNumber("Shooter/Target RPM", 0.0);
     double targetVoltage = SmartDashboard.getNumber("Feeder/Target Voltage", 0.0);
     double intakeTargetVoltage = SmartDashboard.getNumber("Intake/Target Voltage", 0.0);
-    double intakePivotTargetPosition = SmartDashboard.getNumber("Intake Pivot/Position", 0.0);
+
 
     boolean shooter = SmartDashboard.getBoolean("Shooter/On", false);
     boolean feeder = SmartDashboard.getBoolean("Feeder/On", false);
@@ -165,10 +162,9 @@ public class Robot extends LoggedRobot {
         : frc.robot.subsystems.feeder.Feeder.WantedState.OFF);
     m_robotContainer.getFeeder().setVoltage(targetVoltage);
 
-    m_robotContainer.getIntake().setWantedState(intake ? frc.robot.subsystems.intake.Intake.WantedState.TEST
-        : frc.robot.subsystems.intake.Intake.WantedState.STOP);
+    m_robotContainer.getIntake().setWantedState(intake ? frc.robot.subsystems.intake.Intake.WantedState.TEST_INTAKE
+        : frc.robot.subsystems.intake.Intake.WantedState.STOPPED);
     m_robotContainer.getIntake().setIntakeTestVoltage(intakeTargetVoltage);
-    m_robotContainer.getIntake().setCustomPivotPosition(Degrees.of(intakePivotTargetPosition));
 
     Pose2d pose = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-rear").pose;
     double distance = pose.getTranslation()

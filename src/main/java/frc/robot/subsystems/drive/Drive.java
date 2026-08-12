@@ -30,8 +30,10 @@ public final class Drive extends SubsystemBase {
     TELEOP,
     AIM_STATIONARY,
     DRIVE_TO_POSE,
+    PATH_FOLLOWING,
     STOPPED
   }
+
   private static final double JOYSTICK_DEADBAND = 0.10;
   private static final double TELEOP_TRANSLATION_SCALE = 0.4;
   private static final double TELEOP_ROTATION_SCALE = 0.2;
@@ -54,6 +56,7 @@ public final class Drive extends SubsystemBase {
   private double teleopOmegaInput;
   private Rotation2d targetHeading = Rotation2d.kZero;
   private Pose2d targetPose = Pose2d.kZero;
+  private ChassisSpeeds pathFollowingSpeeds = new ChassisSpeeds();
   private double driveToPoseMaxSpeedMetersPerSecond;
   private double driveToPosePositionToleranceMeters = 0.10;
   private double driveToPoseHeadingToleranceRadians = Math.toRadians(4.0);
@@ -165,16 +168,42 @@ public final class Drive extends SubsystemBase {
     return inputs.measuredRobotRelativeSpeeds.omegaRadiansPerSecond;
   }
 
+  /**
+   * Accepts the robot-relative velocity output produced by the BLine path
+   * follower.
+   */
+  public void acceptPathSpeeds(ChassisSpeeds speeds) {
+    pathFollowingSpeeds = new ChassisSpeeds(
+        speeds.vxMetersPerSecond,
+        speeds.vyMetersPerSecond,
+        speeds.omegaRadiansPerSecond);
+    controlMode = ControlMode.PATH_FOLLOWING;
+  }
+
+  /** Returns measured robot-relative velocity for BLine's rate limiter. */
+  public ChassisSpeeds getMeasuredRobotRelativeSpeeds() {
+    ChassisSpeeds speeds = inputs.measuredRobotRelativeSpeeds;
+    return new ChassisSpeeds(
+        speeds.vxMetersPerSecond,
+        speeds.vyMetersPerSecond,
+        speeds.omegaRadiansPerSecond);
+  }
+
   public ControlMode getControlMode() {
     return controlMode;
   }
 
   public void stop() {
+    pathFollowingSpeeds = new ChassisSpeeds();
     controlMode = ControlMode.STOPPED;
   }
 
   public void resetPose(Pose2d pose) {
     io.resetPose(pose);
+    inputs.pose = pose;
+    inputs.measuredRobotRelativeSpeeds = new ChassisSpeeds();
+    robotState.addDriveObservation(inputs.timestampSeconds, pose, new ChassisSpeeds());
+    field.setRobotPose(pose);
   }
 
   public void resetHeadingForAlliance() {
@@ -222,6 +251,7 @@ public final class Drive extends SubsystemBase {
         io.runVelocity(new ChassisSpeeds(0.0, 0.0, omega));
       }
       case DRIVE_TO_POSE -> io.runVelocity(calculateDriveToPoseSpeeds());
+      case PATH_FOLLOWING -> io.runVelocity(pathFollowingSpeeds);
       case STOPPED -> io.stop();
     }
   }
