@@ -8,4 +8,5 @@ public record VisionConfiguration(
     Transform3d robotToCamera,
     double maxTagDistanceMeters,
     double maxAngularVelocityDegreesPerSecond,
+    double maxPoseJumpMeters,
     double fieldBoundaryMarginMeters) {}

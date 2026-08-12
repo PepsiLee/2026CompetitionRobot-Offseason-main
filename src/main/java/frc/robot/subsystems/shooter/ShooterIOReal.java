@@ -6,6 +6,7 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
@@ -21,16 +22,17 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 import edu.wpi.first.units.measure.AngularVelocity;
 import frc.robot.Constants.KrakenX60;
 import frc.robot.config.ShooterConfiguration;
 
 public final class ShooterIOReal implements ShooterIO {
-  private static final AngularVelocity kVelocityTolerance = RPM.of(100);
+  private static final AngularVelocity kVelocityTolerance = RPM.of(150);
   private final ShooterConfiguration configuration;
   private final TalonFX shootOne, shootTwo;
   private final List<TalonFX> motors;
-  private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
   private final MotionMagicVelocityVoltage motionMagicVelocityVoltage = new MotionMagicVelocityVoltage(0);
   private final VoltageOut voltageRequest = new VoltageOut(0);
 
@@ -65,11 +67,11 @@ public final class ShooterIOReal implements ShooterIO {
                 .withSupplyCurrentLimitEnable(true))
         .withSlot0(
             new Slot0Configs()
-                .withKP(0.5)
+                .withKP(0.3)
                 .withKI(0)
                 .withKD(0)
-                .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond))
-        ).withMotionMagic(
+                .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond)))
+        .withMotionMagic(
             new MotionMagicConfigs()
                 .withMotionMagicAcceleration(250) // rps^2
                 .withMotionMagicJerk(1500) // rps^3
@@ -80,19 +82,20 @@ public final class ShooterIOReal implements ShooterIO {
 
   @Override
   public void updateInputs(Inputs inputs) {
-    for (int i = 0; i < motors.size(); i++) {
-      TalonFX motor = motors.get(i);
+    int i = 0;
+    for (final TalonFX motor : motors) {
       inputs.connected[i] = motor.getVersion().getStatus().isOK();
       inputs.velocityRotationsPerSecond[i] = motor.getVelocity().getValueAsDouble();
       inputs.appliedVolts[i] = motor.getMotorVoltage().getValueAsDouble();
       inputs.supplyCurrentAmps[i] = motor.getSupplyCurrent().getValueAsDouble();
       inputs.statorCurrentAmps[i] = motor.getStatorCurrent().getValueAsDouble();
       inputs.temperatureCelsius[i] = motor.getDeviceTemp().getValueAsDouble();
+      i++;
     }
   }
 
   public void setRPM(double rpm) {
-    rpm = rpm / configuration.gearRatio();
+    rpm = rpm * configuration.gearRatio();
     for (final TalonFX motor : motors) {
       motor.setControl(
           motionMagicVelocityVoltage.withVelocity(RPM.of(rpm)));
@@ -113,9 +116,13 @@ public final class ShooterIOReal implements ShooterIO {
 
   public boolean isVelocityWithinTolerance() {
     return motors.stream().allMatch(motor -> {
-      final boolean isInVelocityMode = motor.getAppliedControl().equals(velocityRequest);
+      final boolean isInVelocityMode = motor.getAppliedControl().equals(motionMagicVelocityVoltage);
       final AngularVelocity currentVelocity = motor.getVelocity().getValue();
-      final AngularVelocity targetVelocity = velocityRequest.getVelocityMeasure();
+      final AngularVelocity targetVelocity = motionMagicVelocityVoltage.getVelocityMeasure();
+      SmartDashboard.putBoolean("Shooter/isInVelocityMode", isInVelocityMode);
+      SmartDashboard.putString("Shooter/currentVelocity", motor.getVelocity().getValue().toString());
+      SmartDashboard.putString("Shooter/targetVelocity", motionMagicVelocityVoltage.getVelocityMeasure().toString());
+      SmartDashboard.putBoolean("Shooter/isVelocityWithinTolerance", isInVelocityMode && currentVelocity.isNear(targetVelocity, kVelocityTolerance));
       return isInVelocityMode && currentVelocity.isNear(targetVelocity, kVelocityTolerance);
     });
   }

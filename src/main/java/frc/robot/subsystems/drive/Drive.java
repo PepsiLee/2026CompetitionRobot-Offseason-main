@@ -1,6 +1,5 @@
 package frc.robot.subsystems.drive;
 
-import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.controller.PIDController;
@@ -34,6 +33,7 @@ public final class Drive extends SubsystemBase {
     PATH_FOLLOWING,
     STOPPED
   }
+
   private static final double JOYSTICK_DEADBAND = 0.10;
   private static final double TELEOP_TRANSLATION_SCALE = 0.4;
   private static final double TELEOP_ROTATION_SCALE = 0.2;
@@ -168,7 +168,10 @@ public final class Drive extends SubsystemBase {
     return inputs.measuredRobotRelativeSpeeds.omegaRadiansPerSecond;
   }
 
-  /** Accepts the robot-relative velocity output produced by the BLine path follower. */
+  /**
+   * Accepts the robot-relative velocity output produced by the BLine path
+   * follower.
+   */
   public void acceptPathSpeeds(ChassisSpeeds speeds) {
     pathFollowingSpeeds = new ChassisSpeeds(
         speeds.vxMetersPerSecond,
@@ -216,14 +219,6 @@ public final class Drive extends SubsystemBase {
 
   public Field2d getField() {
     return field;
-  }
-
-  /** Publishes the Pigeon2 raw yaw using WPILib's standard Gyro Sendable schema. */
-  public Sendable getGyroSendable() {
-    return builder -> {
-      builder.setSmartDashboardType("Gyro");
-      builder.addDoubleProperty("Value", () -> inputs.gyroYaw.getDegrees(), null);
-    };
   }
 
   public Optional<Pose2d> samplePoseAt(double timestampSeconds) {

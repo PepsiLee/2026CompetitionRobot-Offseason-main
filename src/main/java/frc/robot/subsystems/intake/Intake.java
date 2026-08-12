@@ -1,8 +1,16 @@
 package frc.robot.subsystems.intake;
 
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.config.IntakeConfiguration;
+
+import static edu.wpi.first.units.Units.Seconds;
+
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -11,15 +19,19 @@ import org.littletonrobotics.junction.Logger;
  */
 public final class Intake extends SubsystemBase {
   public enum WantedState {
-    OFF,
+    ONLY_ROLLER,
     INTAKE,
-    STOPPED
+    STOPPED,
+    TEST_INTAKE,
+    DEPLOY
   }
 
   private final IntakeIO io;
   private final IntakeIO.Inputs inputs = new IntakeIO.Inputs();
   private final IntakeConfiguration configuration;
-  private WantedState wantedState = WantedState.OFF;
+  private WantedState wantedState = WantedState.STOPPED;
+  private double intakeTestVoltage = 0.0;
+  private boolean isDeploy = false;
 
   public Intake(IntakeIO io, IntakeConfiguration configuration) {
     this.io = io;
@@ -29,15 +41,36 @@ public final class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    boolean robotEnabled = DriverStation.isEnabled();
-    boolean runAlwaysOnMotor = robotEnabled
-        && wantedState != WantedState.STOPPED
-        && (DriverStation.isTeleopEnabled() || wantedState == WantedState.INTAKE);
-    double alwaysOnVolts = runAlwaysOnMotor ? configuration.alwaysOnVolts() : 0.0;
+    double alwaysOnVolts = 0.0;
+    double circleMotorVolts = 0.0;
 
-    double circleMotorVolts = robotEnabled && wantedState == WantedState.INTAKE
-        ? configuration.circleMotorVolts()
-        : 0.0;
+    switch (wantedState) {
+      case INTAKE:
+        alwaysOnVolts = configuration.alwaysOnVolts();
+        circleMotorVolts = configuration.circleMotorVolts();
+        break;
+
+      case ONLY_ROLLER:
+        alwaysOnVolts = configuration.alwaysOnVolts();
+        circleMotorVolts = 0.0;
+        break;
+
+      case TEST_INTAKE:
+        alwaysOnVolts = intakeTestVoltage;
+        circleMotorVolts = 0.0;
+        break;
+
+      case DEPLOY:
+        alwaysOnVolts = 0.0;
+        circleMotorVolts = 5.0;
+        break;
+
+      case STOPPED:
+      default:
+        alwaysOnVolts = 0.0;
+        circleMotorVolts = 0.0;
+        break;
+    }
 
     io.setVoltages(alwaysOnVolts, circleMotorVolts);
 
@@ -50,6 +83,7 @@ public final class Intake extends SubsystemBase {
     Logger.recordOutput("Intake/SupplyCurrentAmps", inputs.supplyCurrentAmps);
     Logger.recordOutput("Intake/StatorCurrentAmps", inputs.statorCurrentAmps);
     Logger.recordOutput("Intake/TemperatureCelsius", inputs.temperatureCelsius);
+    Logger.recordOutput("Intake/isDeployed", isDeploy);
   }
 
   public void setWantedState(WantedState state) {
@@ -60,7 +94,19 @@ public final class Intake extends SubsystemBase {
     return wantedState;
   }
 
-  public void setVoltage(double alwaysOnVolts, double circleMotorVolts) {
-    io.setVoltages(alwaysOnVolts, circleMotorVolts);
+  public void setIntakeTestVoltage(double voltage) {
+    intakeTestVoltage = voltage;
+  }
+
+  public Command deployIntake() {
+    return Commands.sequence(
+        runOnce(() -> setWantedState(WantedState.DEPLOY)),
+        Commands.waitTime(Seconds.of(0.4)),
+        runOnce(() -> {
+          isDeploy = true;
+          setWantedState(WantedState.STOPPED);
+        }))
+        .unless(() -> isDeploy)
+        .withInterruptBehavior(InterruptionBehavior.kCancelIncoming);
   }
 }

@@ -8,9 +8,15 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import frc.robot.constants.FieldConstants;
+import frc.robot.util.ShooterCalculator;
+
+
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -102,6 +108,8 @@ public class Robot extends LoggedRobot {
       SimulatedArena.getInstance().placeGamePiecesOnField();
     }
 
+    // m_robotContainer.getDrive().resetPose(new Pose2d(0,0,Rotation2d.k180deg));
+
     hasEnabled = true;
     m_robotContainer.getSuperStructure().clearStopped();
     m_robotContainer.getSuperStructure().setIntakeRequested(false);
@@ -125,14 +133,14 @@ public class Robot extends LoggedRobot {
     m_robotContainer.getDrive().stop();
 
     SmartDashboard.setDefaultBoolean("Feeder/On", false);
-    SmartDashboard.setDefaultBoolean("Shooter/On", false);
+    SmartDashboard.setDefaultBoolean("Shooter/On", false);    
     SmartDashboard.setDefaultBoolean("Intake/On", false);
 
     SmartDashboard.setDefaultNumber("Feeder/Target Voltage", 0.0);
     SmartDashboard.setDefaultNumber("Shooter/Target RPM", 0.0);
-    SmartDashboard.setDefaultNumber("Intake/Target Voltage", 0.0);
-    SmartDashboard.setDefaultNumber("Intake Pivot/Target Voltage", 0.0);
-    m_robotContainer.getIntake().setVoltage(0, 0);
+    SmartDashboard.setDefaultNumber("Intake/Roller Voltage", 0.0);
+    SmartDashboard.setDefaultNumber("Intake Pivot/Position", 0.0);
+
   }
 
   @Override
@@ -140,7 +148,7 @@ public class Robot extends LoggedRobot {
     double targetRPM = SmartDashboard.getNumber("Shooter/Target RPM", 0.0);
     double targetVoltage = SmartDashboard.getNumber("Feeder/Target Voltage", 0.0);
     double intakeTargetVoltage = SmartDashboard.getNumber("Intake/Target Voltage", 0.0);
-    double intakePivotTargetVoltage = SmartDashboard.getNumber("Intake Pivot/Target Voltage", 0.0);
+
 
     boolean shooter = SmartDashboard.getBoolean("Shooter/On", false);
     boolean feeder = SmartDashboard.getBoolean("Feeder/On", false);
@@ -149,12 +157,20 @@ public class Robot extends LoggedRobot {
     m_robotContainer.getShooter().setWantedState(shooter ? frc.robot.subsystems.shooter.Shooter.WantedState.SHOOTING
         : frc.robot.subsystems.shooter.Shooter.WantedState.OFF);
     m_robotContainer.getShooter().setRPM(targetRPM);
+
     m_robotContainer.getFeeder().setWantedState(feeder ? frc.robot.subsystems.feeder.Feeder.WantedState.TEST_SHOOTER
         : frc.robot.subsystems.feeder.Feeder.WantedState.OFF);
     m_robotContainer.getFeeder().setVoltage(targetVoltage);
-    m_robotContainer.getIntake().setWantedState(intake ? frc.robot.subsystems.intake.Intake.WantedState.OFF
+
+    m_robotContainer.getIntake().setWantedState(intake ? frc.robot.subsystems.intake.Intake.WantedState.TEST_INTAKE
         : frc.robot.subsystems.intake.Intake.WantedState.STOPPED);
-    m_robotContainer.getIntake().setVoltage(intakeTargetVoltage, intakePivotTargetVoltage);
+    m_robotContainer.getIntake().setIntakeTestVoltage(intakeTargetVoltage);
+
+    Pose2d pose = LimelightHelpers.getBotPoseEstimate_wpiBlue("limelight-rear").pose;
+    double distance = pose.getTranslation()
+        .getDistance(FieldConstants.hubForAlliance(DriverStation.getAlliance().orElse(Alliance.Blue)));
+    SmartDashboard.putNumber("test/distance", distance);
+    SmartDashboard.putNumber("test/calculateRPM", ShooterCalculator.calculateRPM(Math.abs(distance)));
   }
 
   @Override

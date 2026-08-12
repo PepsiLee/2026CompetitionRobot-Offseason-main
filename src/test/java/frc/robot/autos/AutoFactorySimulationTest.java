@@ -69,16 +69,17 @@ class AutoFactorySimulationTest {
     intakeIO = new FakeIntakeIO();
     Intake intake =
         new Intake(
-            intakeIO, new IntakeConfiguration("", 9, 10, 7.0, 3.0, 40.0, 80.0));
+            intakeIO, new IntakeConfiguration("", 9, 10, 11, 7.0, 3.0, 40.0, 80.0));
     shooterIO = new FakeShooterIO();
     ShooterConfiguration shooterConfiguration = shooterConfiguration();
     Shooter shooter = new Shooter(shooterIO, shooterConfiguration);
     feederIO = new FakeFeederIO();
     Feeder feeder = new Feeder(
         feederIO,
-        new FeederConfiguration("", 32, 7.0, -7.0, 12.0, 120.0));
+        new FeederConfiguration("", 32, -8.0, 8.0, 120.0));
     superStructure = new SuperStructure(drive, robotState, intake, shooter, feeder);
-    autoFactory = new AutoFactory(drive, superStructure, () -> 0.10);
+    // Snowflake debounces shooter readiness for 0.20 seconds before feeding.
+    autoFactory = new AutoFactory(drive, superStructure, () -> 0.30);
   }
 
   @AfterEach

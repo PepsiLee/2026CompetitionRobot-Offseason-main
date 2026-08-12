@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -12,6 +13,7 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 
 import frc.robot.Constants.KrakenX60;
@@ -22,6 +24,7 @@ public class FeederIOReal implements FeederIO {
 
     private final VelocityVoltage velocityRequest = new VelocityVoltage(0).withSlot(0);
     private final VoltageOut voltageRequest = new VoltageOut(0.0);
+    private final MotionMagicVelocityVoltage motionMagicVelocityVoltage = new MotionMagicVelocityVoltage(0);
 
     public FeederIOReal(FeederConfiguration feederConfiguration) {
 
@@ -43,9 +46,13 @@ public class FeederIOReal implements FeederIO {
                                 .withKP(1)
                                 .withKI(0)
                                 .withKD(0)
-                                .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond)) // 12 volts when requesting
-                                                                                            // max RPS
+                                .withKV(12.0 / KrakenX60.kFreeSpeed.in(RotationsPerSecond)))
+                .withMotionMagic(
+                        new MotionMagicConfigs()
+                                .withMotionMagicAcceleration(250) // rps^2
+                                .withMotionMagicJerk(1500) // rps^3
                 );
+        ;
         motor.getConfigurator().apply(config);
     }
 
@@ -65,7 +72,7 @@ public class FeederIOReal implements FeederIO {
 
     @Override
     public void set(double rpm) {
-        motor.setControl(velocityRequest.withVelocity(RPM.of(rpm)));
+        motor.setControl(motionMagicVelocityVoltage.withVelocity(RPM.of(rpm)));
     }
 
     @Override

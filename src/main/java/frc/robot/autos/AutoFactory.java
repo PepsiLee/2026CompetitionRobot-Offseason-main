@@ -27,6 +27,8 @@ public final class AutoFactory {
   private static final double DEFAULT_SHOOT_SECONDS = 3.0;
   private static final double AIM_TIMEOUT_SECONDS = 3.0;
   private static final double FULL_SHOOT_AIM_TIMEOUT_SECONDS = 10.0;
+  private static final Translation2d BLUE_SHOT_AIM_TARGET = tagMidpoint(25, 26);
+  private static final Translation2d RED_SHOT_AIM_TARGET = tagMidpoint(9, 10);
 
   private final Drive drive;
   private final SuperStructure superStructure;
@@ -127,8 +129,7 @@ public final class AutoFactory {
     Command routine =
         Commands.runOnce(
                 () -> {
-                  superStructure.stopAll();
-                  drive.stop();
+                  cleanupAutoState();
                 },
                 drive,
                 superStructure)
@@ -141,13 +142,12 @@ public final class AutoFactory {
         FieldConstants.blueToAlliance(FieldConstants.BLUE_LEFT_START, alliance);
     Command routine =
         Commands.sequence(
-                resetForAuto(startingPose),
+                resetForAuto(startingPose, alliance),
                 shootForConfiguredDuration("Preload"),
                 stopAll())
             .finallyDo(
                 interrupted -> {
-                  superStructure.stopAll();
-                  drive.stop();
+                  cleanupAutoState();
                   Logger.recordOutput("Auto/Interrupted", interrupted);
                 })
             .withName(AutoMode.SHOOT_ONLY.name());
@@ -159,8 +159,7 @@ public final class AutoFactory {
       Command safeFailure = Commands.runOnce(
               () -> {
                 DriverStation.reportError(shootPathLoadError, false);
-                superStructure.stopAll();
-                drive.stop();
+                cleanupAutoState();
               },
               drive,
               superStructure)
@@ -189,7 +188,7 @@ public final class AutoFactory {
         .build(shootPath);
 
     Command routine = Commands.sequence(
-            resetForAuto(startingPose),
+            resetForAuto(startingPose, alliance),
             Commands.runOnce(
                 () -> {
                   Logger.recordOutput("Auto/BLine/Alliance", alliance.name());
@@ -213,9 +212,7 @@ public final class AutoFactory {
             stopAll())
         .finallyDo(
             interrupted -> {
-              clearShootRequests();
-              superStructure.stopAll();
-              drive.stop();
+              cleanupAutoState();
               Logger.recordOutput("Auto/Interrupted", interrupted);
               Logger.recordOutput("Auto/BLine/ReachedFinalPoint", false);
             })
@@ -229,8 +226,7 @@ public final class AutoFactory {
               () -> {
                 DriverStation.reportError(fullShootPathLoadError, false);
                 superStructure.setIntakeRequested(false);
-                superStructure.stopAll();
-                drive.stop();
+                cleanupAutoState();
                 Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
                 Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
               },
@@ -263,7 +259,7 @@ public final class AutoFactory {
         .build(followerPath);
 
     Command routine = Commands.sequence(
-            resetForAuto(startingPose),
+            resetForAuto(startingPose, alliance),
             Commands.runOnce(
                 () -> {
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/Alliance", alliance.name());
@@ -297,9 +293,7 @@ public final class AutoFactory {
         .finallyDo(
             interrupted -> {
               superStructure.setIntakeRequested(false);
-              clearShootRequests(FULL_SHOOT_LOG_PREFIX);
-              superStructure.stopAll();
-              drive.stop();
+              cleanupAutoState(FULL_SHOOT_LOG_PREFIX);
               Logger.recordOutput("Auto/Interrupted", interrupted);
               Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
               Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
@@ -308,14 +302,18 @@ public final class AutoFactory {
     return new AutoRoutine(startingPose, routine);
   }
 
-  private Command resetForAuto(Pose2d startingPose) {
+  private Command resetForAuto(Pose2d startingPose, Alliance alliance) {
     return Commands.runOnce(
         () -> {
+          superStructure.setAutoIntakeIdleSuppressed(true);
+          superStructure.setAutoShotTargets(
+              shotAimTargetForAlliance(alliance), FieldConstants.hubForAlliance(alliance));
           superStructure.clearStopped();
           superStructure.setIntakeRequested(false);
           clearShootRequests();
           drive.resetPose(startingPose);
           drive.stop();
+          Logger.recordOutput("Auto/ShotAimTarget", shotAimTargetForAlliance(alliance));
         },
         drive,
         superStructure);
@@ -324,8 +322,7 @@ public final class AutoFactory {
   private Command stopAll() {
     return Commands.runOnce(
         () -> {
-          superStructure.stopAll();
-          drive.stop();
+          cleanupAutoState();
         },
         drive,
         superStructure);
@@ -380,6 +377,36 @@ public final class AutoFactory {
     superStructure.setShootRequested(false);
     superStructure.setDirectShootRequested(false);
     recordShootLog(logPrefix, "ForcedShot", false);
+  }
+
+  private void cleanupAutoState() {
+    cleanupAutoState(null);
+  }
+
+  private void cleanupAutoState(String logPrefix) {
+    clearShootRequests(logPrefix);
+    superStructure.stopAll();
+    superStructure.clearAutoShotTargets();
+    superStructure.setAutoIntakeIdleSuppressed(false);
+    drive.stop();
+  }
+
+  private static Translation2d shotAimTargetForAlliance(Alliance alliance) {
+    return alliance == Alliance.Red ? RED_SHOT_AIM_TARGET : BLUE_SHOT_AIM_TARGET;
+  }
+
+  private static Translation2d tagMidpoint(int firstId, int secondId) {
+    Translation2d first = FieldConstants.FIELD_LAYOUT
+        .getTagPose(firstId)
+        .orElseThrow(() -> new IllegalStateException("Missing AprilTag " + firstId))
+        .getTranslation()
+        .toTranslation2d();
+    Translation2d second = FieldConstants.FIELD_LAYOUT
+        .getTagPose(secondId)
+        .orElseThrow(() -> new IllegalStateException("Missing AprilTag " + secondId))
+        .getTranslation()
+        .toTranslation2d();
+    return first.plus(second).div(2.0);
   }
 
   private static void recordShootLog(String logPrefix, String key, boolean value) {

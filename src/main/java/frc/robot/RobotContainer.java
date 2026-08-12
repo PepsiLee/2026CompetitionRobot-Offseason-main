@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.autos.AutoFactory;
 import frc.robot.autos.AutoMode;
 import frc.robot.autos.AutoRoutine;
@@ -59,7 +60,6 @@ public class RobotContainer {
     }
     drive = new Drive(robotState, driveIO, configuration.drive());
     SmartDashboard.putData("Field", drive.getField());
-    SmartDashboard.putData("Gyro", drive.getGyroSendable());
 
     if (RobotBase.isReal()) {
       intake = new Intake(new IntakeIOReal(configuration.intake()), configuration.intake());
@@ -86,14 +86,19 @@ public class RobotContainer {
 
     configureBindings();
     configureAutoChooser();
+
   }
 
   private void configureBindings() {
+
+    // RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
+    // .onTrue(intake.deployIntake());
+
     drive.setDefaultCommand(
         drive.run(
             () -> drive.acceptTeleopInput(
-                driverController.getLeftY(),
-                driverController.getLeftX(),
+                -driverController.getLeftY(),
+                -driverController.getLeftX(),
                 -driverController.getRightX()))
             .withName("Drive Field Relative"));
 

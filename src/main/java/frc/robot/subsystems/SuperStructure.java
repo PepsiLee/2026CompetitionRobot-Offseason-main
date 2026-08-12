@@ -23,8 +23,6 @@ import org.littletonrobotics.junction.Logger;
  * aiming.
  */
 public final class SuperStructure extends SubsystemBase {
-  record ShotTargets(Translation2d aimTarget, Translation2d distanceTarget) {}
-
   public enum SystemState {
     IDLE,
     INTAKING,
@@ -39,7 +37,7 @@ public final class SuperStructure extends SubsystemBase {
   private static final double AIM_EXIT_TOLERANCE_RADIANS = Units.degreesToRadians(6.0);
   private static final double AIM_MAX_ANGULAR_SPEED_RADIANS_PER_SECOND = Units.degreesToRadians(15.0);
   private static final double AIM_STABLE_SECONDS = 0.10;
-
+  private static final double SPEED_STABLE_SECONDS = 0.20;
   // subsystem references
   private final Drive drive;
   private final RobotState robotState;
@@ -48,16 +46,18 @@ public final class SuperStructure extends SubsystemBase {
   private final Feeder feeder;
 
   private final Debouncer aimReadyDebouncer = new Debouncer(AIM_STABLE_SECONDS, Debouncer.DebounceType.kRising);
+  private final Debouncer speedReadyDebouncer = new Debouncer(SPEED_STABLE_SECONDS, Debouncer.DebounceType.kRising);
   // Flags for requested actions
   private boolean intakeRequested;
   private boolean shootRequested;
   private boolean directShootRequested;
   private boolean stopped;
+  private boolean autoIntakeIdleSuppressed;
   // Current state of the superstructure
   private SystemState systemState = SystemState.IDLE;
-  private Translation2d desiredAimTarget = FieldConstants.BLUE_TAG_AIM_TARGET;
-  private Translation2d shotDistanceTarget = FieldConstants.BLUE_HUB;
-  private double desiredShotDistanceMeters;
+  private Translation2d autoAimTarget;
+  private Translation2d autoDistanceTarget;
+  private double autoShotDistanceMeters;
   private Rotation2d desiredAimHeading = Rotation2d.kZero;
   private Rotation2d lockedShotHeading = Rotation2d.kZero;
   private double lockedShotDistanceMeters;
@@ -74,12 +74,11 @@ public final class SuperStructure extends SubsystemBase {
   @Override
   public void periodic() {
     Alliance alliance = DriverStation.getAlliance().orElse(Alliance.Blue);
-    ShotTargets targets = targetsForAlliance(alliance);
-    desiredAimTarget = targets.aimTarget();
-    shotDistanceTarget = targets.distanceTarget();
-    desiredAimHeading = calculateRearShooterHeading(robotState.getPose(), desiredAimTarget);
-    desiredShotDistanceMeters =
-        robotState.getPose().getTranslation().getDistance(shotDistanceTarget);
+    Translation2d hub = FieldConstants.hubForAlliance(alliance);
+    Translation2d aimTarget = autoAimTarget != null ? autoAimTarget : hub;
+    Translation2d distanceTarget = autoDistanceTarget != null ? autoDistanceTarget : hub;
+    autoShotDistanceMeters = robotState.getPose().getTranslation().getDistance(distanceTarget);
+    desiredAimHeading = calculateRearShooterHeading(robotState.getPose(), aimTarget);
 
     systemState = determineState();
     applyState();
@@ -88,9 +87,9 @@ public final class SuperStructure extends SubsystemBase {
     Logger.recordOutput("SuperStructure/IntakeRequested", intakeRequested);
     Logger.recordOutput("SuperStructure/ShootRequested", shootRequested);
     Logger.recordOutput("SuperStructure/DirectShootRequested", directShootRequested);
-    Logger.recordOutput("SuperStructure/TagAimTarget", desiredAimTarget);
-    Logger.recordOutput("SuperStructure/HubDistanceTarget", shotDistanceTarget);
-    Logger.recordOutput("SuperStructure/DesiredShotDistanceMeters", desiredShotDistanceMeters);
+    Logger.recordOutput("SuperStructure/AutoShotTargetOverrideActive", autoAimTarget != null);
+    Logger.recordOutput("SuperStructure/AimTarget", aimTarget);
+    Logger.recordOutput("SuperStructure/ShotDistanceTarget", distanceTarget);
     Logger.recordOutput("SuperStructure/DesiredAimHeading", desiredAimHeading);
     Logger.recordOutput("SuperStructure/LockedShotHeading", lockedShotHeading);
     Logger.recordOutput("SuperStructure/LockedShotDistanceMeters", lockedShotDistanceMeters);
@@ -114,6 +113,7 @@ public final class SuperStructure extends SubsystemBase {
       aimReadyDebouncer.calculate(false);
       return intakeRequested ? SystemState.INTAKING : SystemState.IDLE;
     }
+
     // Check if we are already shooting and if we are still aimed at the target
     if (systemState == SystemState.SHOOTING) {
       if (Math.abs(drive.getHeadingErrorRadians(lockedShotHeading)) > AIM_EXIT_TOLERANCE_RADIANS) {
@@ -131,16 +131,23 @@ public final class SuperStructure extends SubsystemBase {
     }
 
     lockedShotHeading = desiredAimHeading;
-    lockedShotDistanceMeters = desiredShotDistanceMeters;
+    lockedShotDistanceMeters = autoShotDistanceMeters;
     return SystemState.SHOOTING;
   }
 
   private void applyState() {
+
     if (systemState == SystemState.FAULT || systemState == SystemState.STOPPED) {
       intake.setWantedState(Intake.WantedState.STOPPED);
     } else {
-      intake.setWantedState(
-          intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.OFF);
+      if (intake.getWantedState() != Intake.WantedState.DEPLOY) {
+        intake.setWantedState(
+            intakeRequested
+                ? Intake.WantedState.INTAKE
+                : autoIntakeIdleSuppressed
+                    ? Intake.WantedState.STOPPED
+                    : Intake.WantedState.ONLY_ROLLER);
+      }
     }
 
     switch (systemState) {
@@ -162,7 +169,7 @@ public final class SuperStructure extends SubsystemBase {
       case SHOOTING -> {
         shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
-        if (shooter.isReady()) {
+        if (speedReadyDebouncer.calculate(shooter.isReady())) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);
         } else {
           feeder.setWantedState(Feeder.WantedState.OFF);
@@ -170,14 +177,16 @@ public final class SuperStructure extends SubsystemBase {
         drive.requestAimStationary(lockedShotHeading);
       }
       case DIRECT_SHOOTING -> {
-        shooter.setRPM(ShooterCalculator.calculateRPM(desiredShotDistanceMeters));
+        double shotDistanceMeters =
+            autoDistanceTarget != null ? autoShotDistanceMeters : lockedShotDistanceMeters;
+        shooter.setRPM(ShooterCalculator.calculateRPM(shotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
-        if (shooter.isReady()) {
+        if (speedReadyDebouncer.calculate(shooter.isReady())) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);
         } else {
           feeder.setWantedState(Feeder.WantedState.OFF);
         }
-        drive.requestAimStationary(desiredAimHeading);
+        drive.releaseAim();
       }
       case FAULT, STOPPED -> {
         shooter.setWantedState(Shooter.WantedState.OFF);
@@ -194,12 +203,6 @@ public final class SuperStructure extends SubsystemBase {
         .plus(Rotation2d.k180deg);
   }
 
-  static ShotTargets targetsForAlliance(Alliance alliance) {
-    return new ShotTargets(
-        FieldConstants.tagAimTargetForAlliance(alliance),
-        FieldConstants.hubForAlliance(alliance));
-  }
-
   public void setIntakeRequested(boolean requested) {
     intakeRequested = requested;
   }
@@ -210,6 +213,25 @@ public final class SuperStructure extends SubsystemBase {
 
   public void setDirectShootRequested(boolean requested) {
     directShootRequested = requested;
+  }
+
+  /** Gives an autonomous routine separate heading and shooter-distance targets. */
+  public void setAutoShotTargets(Translation2d aimTarget, Translation2d distanceTarget) {
+    autoAimTarget = aimTarget;
+    autoDistanceTarget = distanceTarget;
+  }
+
+  public void clearAutoShotTargets() {
+    autoAimTarget = null;
+    autoDistanceTarget = null;
+  }
+
+  /** Stops Snowflake's idle roller during autonomous without changing its teleop behavior. */
+  public void setAutoIntakeIdleSuppressed(boolean suppressed) {
+    autoIntakeIdleSuppressed = suppressed;
+    if (suppressed && !intakeRequested) {
+      intake.setWantedState(Intake.WantedState.STOPPED);
+    }
   }
 
   public boolean isShooting() {
@@ -242,7 +264,11 @@ public final class SuperStructure extends SubsystemBase {
     faultReason = "";
     systemState = intakeRequested ? SystemState.INTAKING : SystemState.IDLE;
     intake.setWantedState(
-        intakeRequested ? Intake.WantedState.INTAKE : Intake.WantedState.OFF);
+        intakeRequested
+            ? Intake.WantedState.INTAKE
+            : autoIntakeIdleSuppressed
+                ? Intake.WantedState.STOPPED
+                : Intake.WantedState.ONLY_ROLLER);
     shooter.setWantedState(Shooter.WantedState.OFF);
     feeder.setWantedState(Feeder.WantedState.OFF);
     drive.releaseAim();

@@ -2,11 +2,11 @@ package frc.robot.util;
 
 public class ShooterCalculator {
     // All Distance is meter
-    private static final double TARGET_HEIGHT = 1.8288;
-    private static final double ANGLE_DEG = 75.0;
-    private static final double GRAVITY = 9.81;
-    private static final double SHOOTER_HEIGHT = 0.47;
-    private static final double WHEEL_DIAMETER = 0.1;
+    private static final double TARGET_HEIGHT = 1.86; //m
+    private static final double ANGLE_DEG = 73.0; //deg
+    private static final double GRAVITY = 9.81; //m/s^2
+    private static final double SHOOTER_HEIGHT = 0.55; //m
+    private static final double WHEEL_DIAMETER = 0.1; //m
     private static final boolean IS_HOODED_SHOOTER = true;
 
     /**
@@ -40,8 +40,6 @@ public class ShooterCalculator {
 
         // 加上一個摩擦力與動能損耗的補償係數 (視你們的機器狀況微調，預設為 1.0 不變)
         double tuningFactor = 1.1;
-        
-        // return ballVelocity * 1.07;
 
         return rpm * tuningFactor;
     }
