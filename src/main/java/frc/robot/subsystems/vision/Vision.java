@@ -27,9 +27,24 @@ public final class Vision extends SubsystemBase {
     ROTATING_TOO_FAST
   }
 
+  public enum HeadingRejectionReason {
+    ACCEPTED,
+    NO_MT1_POSE,
+    SINGLE_TAG_AMBIGUOUS,
+    INVALID_TIMESTAMP,
+    STALE,
+    OUTSIDE_FIELD,
+    TAG_TOO_FAR,
+    ROTATING_TOO_FAST
+  }
+
   private static final double MAX_MEASUREMENT_AGE_SECONDS = 0.50;
   private static final double RECENT_MEASUREMENT_SECONDS = 1.0;
   private static final double HEADING_STANDARD_DEVIATION_RADIANS = 1.0e6;
+  private static final double MT1_XY_STANDARD_DEVIATION_METERS = 1.0e6;
+  private static final double MT1_HEADING_STANDARD_DEVIATION_RADIANS = 0.10;
+  private static final double MT1_SINGLE_TAG_MAX_AMBIGUITY = 0.15;
+  private static final double MT1_SINGLE_TAG_MAX_DISTANCE_METERS = 3.0;
 
   private final RobotState robotState;
   private final Drive drive;
@@ -37,6 +52,8 @@ public final class Vision extends SubsystemBase {
   private final VisionIO io;
   private final VisionIO.Inputs inputs = new VisionIO.Inputs();
   private RejectionReason lastRejectionReason = RejectionReason.NO_TAGS;
+  private HeadingRejectionReason lastHeadingRejectionReason =
+      HeadingRejectionReason.NO_MT1_POSE;
 
   public Vision(
       RobotState robotState, Drive drive, VisionConfiguration configuration, VisionIO io) {
@@ -87,6 +104,25 @@ public final class Vision extends SubsystemBase {
       Logger.recordOutput("Vision/XYStandardDeviation", xyStandardDeviation);
     }
 
+    VisionMeasurement mt1Measurement = new VisionMeasurement(
+        inputs.mt1EstimatedPose,
+        inputs.mt1TimestampSeconds,
+        inputs.mt1TagCount,
+        inputs.mt1AverageDistanceMeters);
+    lastHeadingRejectionReason = evaluateMt1Heading(
+        mt1Measurement,
+        inputs.mt1MaximumAmbiguity,
+        yawRateDegreesPerSecond);
+    if (lastHeadingRejectionReason == HeadingRejectionReason.ACCEPTED) {
+      drive.addVisionMeasurement(
+          mt1Measurement.pose(),
+          mt1Measurement.timestampSeconds(),
+          VecBuilder.fill(
+              MT1_XY_STANDARD_DEVIATION_METERS,
+              MT1_XY_STANDARD_DEVIATION_METERS,
+              MT1_HEADING_STANDARD_DEVIATION_RADIANS));
+    }
+
     Logger.recordOutput("Vision/Heartbeat", inputs.heartbeat);
     Logger.recordOutput("Vision/Connected", inputs.connected);
     Logger.recordOutput("Vision/TargetValid", inputs.targetValid);
@@ -102,6 +138,15 @@ public final class Vision extends SubsystemBase {
     Logger.recordOutput("Vision/AverageDistanceMeters", inputs.averageDistanceMeters);
     Logger.recordOutput("Vision/TimestampSeconds", inputs.timestampSeconds);
     Logger.recordOutput("Vision/RejectionReason", lastRejectionReason);
+    Logger.recordOutput("Vision/MT1HeadingPose", inputs.mt1EstimatedPose);
+    Logger.recordOutput("Vision/MT1HeadingTagCount", inputs.mt1TagCount);
+    Logger.recordOutput("Vision/MT1HeadingAverageDistanceMeters", inputs.mt1AverageDistanceMeters);
+    Logger.recordOutput("Vision/MT1HeadingMaximumAmbiguity", inputs.mt1MaximumAmbiguity);
+    Logger.recordOutput("Vision/MT1HeadingTimestampSeconds", inputs.mt1TimestampSeconds);
+    Logger.recordOutput("Vision/MT1HeadingStatus", lastHeadingRejectionReason);
+    Logger.recordOutput(
+        "Vision/MT1HeadingAccepted",
+        lastHeadingRejectionReason == HeadingRejectionReason.ACCEPTED);
     double secondsSinceAcceptedMeasurement = Utils.getCurrentTimeSeconds()
         - robotState.getLastAcceptedVisionTimestampSeconds();
     boolean hasRecentMeasurement = Double.isFinite(secondsSinceAcceptedMeasurement)
@@ -141,6 +186,46 @@ public final class Vision extends SubsystemBase {
 
   public RejectionReason getLastRejectionReason() {
     return lastRejectionReason;
+  }
+
+  public HeadingRejectionReason evaluateMt1Heading(
+      VisionMeasurement measurement,
+      double maximumAmbiguity,
+      double yawRateDegreesPerSecond) {
+    if (measurement.tagCount() <= 0) {
+      return HeadingRejectionReason.NO_MT1_POSE;
+    }
+    if (measurement.tagCount() == 1
+        && (!Double.isFinite(maximumAmbiguity)
+            || maximumAmbiguity > MT1_SINGLE_TAG_MAX_AMBIGUITY
+            || !Double.isFinite(measurement.averageDistanceMeters())
+            || measurement.averageDistanceMeters() > MT1_SINGLE_TAG_MAX_DISTANCE_METERS)) {
+      return HeadingRejectionReason.SINGLE_TAG_AMBIGUOUS;
+    }
+    if (!Double.isFinite(measurement.timestampSeconds())
+        || measurement.timestampSeconds() <= 0.0) {
+      return HeadingRejectionReason.INVALID_TIMESTAMP;
+    }
+    double ageSeconds = Utils.getCurrentTimeSeconds() - measurement.timestampSeconds();
+    if (ageSeconds < -0.05 || ageSeconds > MAX_MEASUREMENT_AGE_SECONDS) {
+      return HeadingRejectionReason.STALE;
+    }
+    if (!isInsideField(measurement.pose())) {
+      return HeadingRejectionReason.OUTSIDE_FIELD;
+    }
+    if (!Double.isFinite(measurement.averageDistanceMeters())
+        || measurement.averageDistanceMeters() < 0.0
+        || measurement.averageDistanceMeters() > configuration.maxTagDistanceMeters()) {
+      return HeadingRejectionReason.TAG_TOO_FAR;
+    }
+    if (Math.abs(yawRateDegreesPerSecond) > configuration.maxAngularVelocityDegreesPerSecond()) {
+      return HeadingRejectionReason.ROTATING_TOO_FAST;
+    }
+    return HeadingRejectionReason.ACCEPTED;
+  }
+
+  public HeadingRejectionReason getLastHeadingRejectionReason() {
+    return lastHeadingRejectionReason;
   }
 
   private String getStatus() {

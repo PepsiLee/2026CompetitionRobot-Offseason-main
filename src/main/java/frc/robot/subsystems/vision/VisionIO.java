@@ -18,6 +18,13 @@ public interface VisionIO {
     public int tagCount;
     public double averageDistanceMeters = Double.NaN;
     public double pipelineLatencyMilliseconds = Double.NaN;
+    public Pose2d mt1EstimatedPose = Pose2d.kZero;
+    /** MT1 timestamp in the same timebase as {@code Utils.getCurrentTimeSeconds()}. */
+    public double mt1TimestampSeconds = Double.NaN;
+    public int mt1TagCount;
+    public double mt1AverageDistanceMeters = Double.NaN;
+    public double mt1MaximumAmbiguity = Double.NaN;
+    public double mt1PipelineLatencyMilliseconds = Double.NaN;
   }
 
   default void setRobotOrientation(double yawDegrees, double yawRateDegreesPerSecond) {}

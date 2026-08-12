@@ -59,6 +59,7 @@ public class RobotContainer {
     }
     drive = new Drive(robotState, driveIO, configuration.drive());
     SmartDashboard.putData("Field", drive.getField());
+    SmartDashboard.putData("Gyro", drive.getGyroSendable());
 
     if (RobotBase.isReal()) {
       intake = new Intake(new IntakeIOReal(configuration.intake()), configuration.intake());
@@ -135,6 +136,8 @@ public class RobotContainer {
     autoChooser.setDefaultOption("Do Nothing", AutoMode.DO_NOTHING);
     autoChooser.addOption("Shoot Only", AutoMode.SHOOT_ONLY);
     autoChooser.addOption("BLine Shoot (Alliance Flip)", AutoMode.BLINE_SHOOT);
+    autoChooser.addOption(
+        "BLine Full Collect + Shoot (Alliance Flip)", AutoMode.BLINE_FULL_SHOOT);
     SmartDashboard.putData("Auto/Mode", autoChooser);
   }
 

@@ -2,6 +2,7 @@ package frc.robot.autos;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.hal.HAL;
@@ -38,6 +39,9 @@ class AutoFactorySimulationTest {
   private FakeDriveIO driveIO;
   private FakeIntakeIO intakeIO;
   private FakeShooterIO shooterIO;
+  private FakeFeederIO feederIO;
+  private Drive drive;
+  private SuperStructure superStructure;
   private AutoFactory autoFactory;
 
   @BeforeAll
@@ -57,7 +61,7 @@ class AutoFactorySimulationTest {
 
     RobotState robotState = new RobotState();
     driveIO = new FakeDriveIO();
-    Drive drive =
+    drive =
         new Drive(
             robotState,
             driveIO,
@@ -69,11 +73,11 @@ class AutoFactorySimulationTest {
     shooterIO = new FakeShooterIO();
     ShooterConfiguration shooterConfiguration = shooterConfiguration();
     Shooter shooter = new Shooter(shooterIO, shooterConfiguration);
-    Feeder feeder =
-        new Feeder(
-            new FeederIO() {},
-            new FeederConfiguration("", 32, 7.0, -7.0, 12.0, 120.0));
-    SuperStructure superStructure = new SuperStructure(drive, robotState, intake, shooter, feeder);
+    feederIO = new FakeFeederIO();
+    Feeder feeder = new Feeder(
+        feederIO,
+        new FeederConfiguration("", 32, 7.0, -7.0, 12.0, 120.0));
+    superStructure = new SuperStructure(drive, robotState, intake, shooter, feeder);
     autoFactory = new AutoFactory(drive, superStructure, () -> 0.10);
   }
 
@@ -139,6 +143,85 @@ class AutoFactorySimulationTest {
 
     assertFalse(shootOnly.isScheduled());
     assertEquals(1, shooterIO.startCount, "auto must force one shot after aim timeout");
+    assertEquals(0.0, driveIO.maximumTranslationSpeed, 1.0e-9);
+  }
+
+  @Test
+  void fullBLineAutoIntakesAlongPathThenAimsAndShoots() {
+    Command fullShoot = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue).command();
+    CommandScheduler.getInstance().schedule(fullShoot);
+
+    for (int i = 0; i < 1500 && fullShoot.isScheduled(); i++) {
+      CommandScheduler.getInstance().run();
+      if (intakeIO.currentlyRunning) {
+        assertFalse(feederIO.everFed, "feeder must remain stopped while following the path");
+      }
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+    }
+
+    assertFalse(fullShoot.isScheduled());
+    assertTrue(intakeIO.everRanForward);
+    assertFalse(intakeIO.currentlyRunning);
+    assertTrue(driveIO.maximumTranslationSpeed > 0.0);
+    assertEquals(1, shooterIO.startCount);
+    assertTrue(feederIO.everFed);
+  }
+
+  @Test
+  void fullBLineAutoUsesItsTenSecondForcedShotTimeout() {
+    Command fullShoot = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue).command();
+    CommandScheduler.getInstance().schedule(fullShoot);
+
+    boolean reachedFinalPoint = false;
+    for (int i = 0; i < 1000 && fullShoot.isScheduled() && !reachedFinalPoint; i++) {
+      CommandScheduler.getInstance().run();
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+      reachedFinalPoint = intakeIO.everRanForward && !intakeIO.currentlyRunning;
+    }
+
+    assertTrue(reachedFinalPoint, "path must finish before testing the aim timeout");
+    driveIO.frozen = true;
+
+    for (int i = 0; i < 450; i++) {
+      CommandScheduler.getInstance().run();
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+    }
+    assertEquals(0, shooterIO.startCount, "new auto must still be aiming before ten seconds");
+    assertFalse(feederIO.everFed);
+
+    for (int i = 0; i < 150 && fullShoot.isScheduled(); i++) {
+      CommandScheduler.getInstance().run();
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+    }
+
+    assertFalse(fullShoot.isScheduled());
+    assertEquals(1, shooterIO.startCount, "new auto must force exactly one shot after ten seconds");
+    assertTrue(feederIO.everFed);
+    assertFalse(intakeIO.currentlyRunning);
+  }
+
+  @Test
+  void missingFullShootPathStopsSafelyWithoutShooting() {
+    AutoFactory missingPathFactory = new AutoFactory(
+        drive,
+        superStructure,
+        () -> 0.10,
+        "shoot",
+        "missing-full-shoot-test-path");
+    Command fullShoot = missingPathFactory
+        .create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue)
+        .command();
+    CommandScheduler.getInstance().schedule(fullShoot);
+
+    for (int i = 0; i < 5 && fullShoot.isScheduled(); i++) {
+      CommandScheduler.getInstance().run();
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+    }
+
+    assertFalse(fullShoot.isScheduled());
+    assertEquals(0, shooterIO.startCount);
+    assertFalse(feederIO.everFed);
+    assertFalse(intakeIO.everRanForward);
     assertEquals(0.0, driveIO.maximumTranslationSpeed, 1.0e-9);
   }
 
@@ -229,6 +312,15 @@ class AutoFactorySimulationTest {
     @Override
     public void stop() {
       running = false;
+    }
+  }
+
+  private static final class FakeFeederIO implements FeederIO {
+    private boolean everFed;
+
+    @Override
+    public void setVoltage(double volts) {
+      everFed |= volts > 0.0;
     }
   }
 }

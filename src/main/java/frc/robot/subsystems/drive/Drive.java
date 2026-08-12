@@ -1,5 +1,6 @@
 package frc.robot.subsystems.drive;
 
+import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.controller.PIDController;
@@ -215,6 +216,14 @@ public final class Drive extends SubsystemBase {
 
   public Field2d getField() {
     return field;
+  }
+
+  /** Publishes the Pigeon2 raw yaw using WPILib's standard Gyro Sendable schema. */
+  public Sendable getGyroSendable() {
+    return builder -> {
+      builder.setSmartDashboardType("Gyro");
+      builder.addDoubleProperty("Value", () -> inputs.gyroYaw.getDegrees(), null);
+    };
   }
 
   public Optional<Pose2d> samplePoseAt(double timestampSeconds) {

@@ -43,6 +43,10 @@ public final class VisionIOLimelightHelper implements VisionIO {
   public void updateInputs(Inputs inputs) {
     updateDiagnostics(inputs);
 
+    final PoseEstimate megaTag1Estimate =
+        LimelightHelpers.getBotPoseEstimate_wpiBlue(name);
+    updateMegaTag1Inputs(inputs, megaTag1Estimate);
+
     final PoseEstimate megaTag2Estimate =
         LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(name);
     if (megaTag2Estimate == null || megaTag2Estimate.tagCount == 0) {
@@ -99,6 +103,31 @@ public final class VisionIOLimelightHelper implements VisionIO {
         inputs.connected ? LimelightHelpers.getCurrentPipelineType(name) : "";
   }
 
+  private void updateMegaTag1Inputs(Inputs inputs, PoseEstimate estimate) {
+    if (estimate == null || estimate.tagCount == 0) {
+      clearMegaTag1Measurement(inputs);
+      return;
+    }
+
+    inputs.mt1EstimatedPose = estimate.pose;
+    inputs.mt1TimestampSeconds = fpgaToCurrentTime.applyAsDouble(estimate.timestampSeconds);
+    inputs.mt1TagCount = estimate.tagCount;
+    inputs.mt1AverageDistanceMeters = estimate.avgTagDist;
+    inputs.mt1MaximumAmbiguity = maximumAmbiguity(estimate);
+    inputs.mt1PipelineLatencyMilliseconds = estimate.latency;
+  }
+
+  private static double maximumAmbiguity(PoseEstimate estimate) {
+    if (estimate.rawFiducials == null || estimate.rawFiducials.length == 0) {
+      return Double.NaN;
+    }
+    double maximum = 0.0;
+    for (LimelightHelpers.RawFiducial fiducial : estimate.rawFiducials) {
+      maximum = Math.max(maximum, fiducial.ambiguity);
+    }
+    return maximum;
+  }
+
   private static void clearMeasurement(Inputs inputs) {
     inputs.hasTargets = false;
     inputs.estimatedPose = Pose2d.kZero;
@@ -106,5 +135,14 @@ public final class VisionIOLimelightHelper implements VisionIO {
     inputs.averageDistanceMeters = Double.NaN;
     inputs.timestampSeconds = Double.NaN;
     inputs.pipelineLatencyMilliseconds = Double.NaN;
+  }
+
+  private static void clearMegaTag1Measurement(Inputs inputs) {
+    inputs.mt1EstimatedPose = Pose2d.kZero;
+    inputs.mt1TimestampSeconds = Double.NaN;
+    inputs.mt1TagCount = 0;
+    inputs.mt1AverageDistanceMeters = Double.NaN;
+    inputs.mt1MaximumAmbiguity = Double.NaN;
+    inputs.mt1PipelineLatencyMilliseconds = Double.NaN;
   }
 }

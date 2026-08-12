@@ -1,6 +1,7 @@
 package frc.robot.subsystems.intake;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.config.IntakeConfiguration;
 import org.littletonrobotics.junction.Logger;
 
@@ -28,10 +29,15 @@ public final class Intake extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    boolean runAlwaysOnMotor = wantedState != WantedState.STOPPED;
+    boolean robotEnabled = DriverStation.isEnabled();
+    boolean runAlwaysOnMotor = robotEnabled
+        && wantedState != WantedState.STOPPED
+        && (DriverStation.isTeleopEnabled() || wantedState == WantedState.INTAKE);
     double alwaysOnVolts = runAlwaysOnMotor ? configuration.alwaysOnVolts() : 0.0;
 
-    double circleMotorVolts = wantedState == WantedState.INTAKE ? configuration.circleMotorVolts() : 0.0;
+    double circleMotorVolts = robotEnabled && wantedState == WantedState.INTAKE
+        ? configuration.circleMotorVolts()
+        : 0.0;
 
     io.setVoltages(alwaysOnVolts, circleMotorVolts);
 
