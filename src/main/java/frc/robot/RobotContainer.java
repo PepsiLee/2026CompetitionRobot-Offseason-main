@@ -134,6 +134,7 @@ public class RobotContainer {
   private void configureAutoChooser() {
     autoChooser.setDefaultOption("Do Nothing", AutoMode.DO_NOTHING);
     autoChooser.addOption("Shoot Only", AutoMode.SHOOT_ONLY);
+    autoChooser.addOption("BLine Shoot (Alliance Flip)", AutoMode.BLINE_SHOOT);
     SmartDashboard.putData("Auto/Mode", autoChooser);
   }
 
