@@ -158,6 +158,7 @@ public final class AutoFactory {
     return switch (mode) {
       case DO_NOTHING -> createDoNothing();
       case STOP_AT_FULL_SHOOT_START -> createStopAtFullShootStart(alliance);
+      case STOP_AT_FAR_TO_BALL_START -> createStopAtFarToBallStart(alliance);
       case BLINE_SHOOT -> createBLineShoot(alliance);
       case BLINE_FULL_SHOOT -> createFullBLineShoot(alliance);
       case BLINE_FAR_TO_BALL_SHOOT -> createFarToBallBLineShoot(alliance);
@@ -205,6 +206,40 @@ public final class AutoFactory {
               Logger.recordOutput("Auto/StopAtFullShootStart/Interrupted", interrupted);
             })
         .withName(AutoMode.STOP_AT_FULL_SHOOT_START.name());
+    return new AutoRoutine(startingPose, routine);
+  }
+
+  private AutoRoutine createStopAtFarToBallStart(Alliance alliance) {
+    if (farToBallPath == null) {
+      Command safeFailure = Commands.runOnce(
+              () -> {
+                // false 表示錯誤訊息不附加 Java stack trace。
+                DriverStation.reportError(farToBallPathLoadError, false);
+                cleanupAutoState();
+              },
+              drive,
+              superStructure)
+          .withName("Stop at Far To Ball Start - Path Error");
+      return new AutoRoutine(Pose2d.kZero, safeFailure);
+    }
+
+    // Blue 使用原始起點；Red 使用場地中心 180 度 alliance flip 後的起點。
+    Path transformedPath = farToBallPath.copy();
+    if (alliance == Alliance.Red) {
+      transformedPath.flip();
+    }
+    Pose2d startingPose = transformedPath.getStartPose();
+
+    // 只重設起始 Pose，接著立即停止；不跟隨路徑、不瞄準、不射擊。
+    Command routine = Commands.sequence(
+            resetForAuto(startingPose, alliance),
+            stopAll())
+        .finallyDo(
+            interrupted -> {
+              cleanupAutoState();
+              Logger.recordOutput("Auto/StopAtFarToBallStart/Interrupted", interrupted);
+            })
+        .withName(AutoMode.STOP_AT_FAR_TO_BALL_START.name());
     return new AutoRoutine(startingPose, routine);
   }
 

@@ -135,6 +135,35 @@ class AutoFactorySimulationTest {
   }
 
   @Test
+  void stopAtFarToBallStartUsesAlliancePoseAndRunsNoMechanism() {
+    AutoRoutine blueStop =
+        autoFactory.create(AutoMode.STOP_AT_FAR_TO_BALL_START, Alliance.Blue);
+    AutoRoutine blueFarToBall =
+        autoFactory.create(AutoMode.BLINE_FAR_TO_BALL_SHOOT, Alliance.Blue);
+    AutoRoutine redStop =
+        autoFactory.create(AutoMode.STOP_AT_FAR_TO_BALL_START, Alliance.Red);
+    AutoRoutine redFarToBall =
+        autoFactory.create(AutoMode.BLINE_FAR_TO_BALL_SHOOT, Alliance.Red);
+
+    assertEquals(blueFarToBall.startingPose(), blueStop.startingPose());
+    assertEquals(redFarToBall.startingPose(), redStop.startingPose());
+
+    Command stop = blueStop.command();
+    CommandScheduler.getInstance().schedule(stop);
+    for (int i = 0; i < 5 && stop.isScheduled(); i++) {
+      CommandScheduler.getInstance().run();
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+    }
+
+    assertFalse(stop.isScheduled());
+    assertEquals(blueStop.startingPose(), drive.getPose());
+    assertEquals(0.0, driveIO.maximumTranslationSpeed, 1.0e-9);
+    assertEquals(0, shooterIO.startCount);
+    assertFalse(feederIO.everFed);
+    assertFalse(intakeIO.everRanForward);
+  }
+
+  @Test
   void fullBLineAutoKeepsIntakeOffThenAimsAndShoots() {
     Command fullShoot = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue).command();
     CommandScheduler.getInstance().schedule(fullShoot);
