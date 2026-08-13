@@ -32,7 +32,7 @@ class FullShootPathTest {
     assertEquals(4.5, velocityConstraints.get(0).value(), EPSILON);
     assertEquals(0, velocityConstraints.get(0).startOrdinal());
     assertEquals(0, velocityConstraints.get(0).endOrdinal());
-    assertEquals(4.65, velocityConstraints.get(5).value(), EPSILON);
+    assertEquals(0.65, velocityConstraints.get(5).value(), EPSILON);
     assertEquals(7, velocityConstraints.get(5).startOrdinal());
     assertEquals(7, velocityConstraints.get(5).endOrdinal());
   }

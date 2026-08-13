@@ -148,20 +148,20 @@ class AutoFactorySimulationTest {
   }
 
   @Test
-  void fullBLineAutoIntakesAlongPathThenAimsAndShoots() {
+  void fullBLineAutoKeepsIntakeOffThenAimsAndShoots() {
     Command fullShoot = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue).command();
     CommandScheduler.getInstance().schedule(fullShoot);
 
     for (int i = 0; i < 1500 && fullShoot.isScheduled(); i++) {
       CommandScheduler.getInstance().run();
-      if (intakeIO.currentlyRunning) {
+      if (drive.getControlMode() == Drive.ControlMode.PATH_FOLLOWING) {
         assertFalse(feederIO.everFed, "feeder must remain stopped while following the path");
       }
       SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
     }
 
     assertFalse(fullShoot.isScheduled());
-    assertTrue(intakeIO.everRanForward);
+    assertFalse(intakeIO.everRanForward);
     assertFalse(intakeIO.currentlyRunning);
     assertTrue(driveIO.maximumTranslationSpeed > 0.0);
     assertEquals(1, shooterIO.startCount);
@@ -174,10 +174,13 @@ class AutoFactorySimulationTest {
     CommandScheduler.getInstance().schedule(fullShoot);
 
     boolean reachedFinalPoint = false;
+    boolean pathStarted = false;
     for (int i = 0; i < 1000 && fullShoot.isScheduled() && !reachedFinalPoint; i++) {
       CommandScheduler.getInstance().run();
+      pathStarted |= drive.getControlMode() == Drive.ControlMode.PATH_FOLLOWING;
+      reachedFinalPoint =
+          pathStarted && drive.getControlMode() != Drive.ControlMode.PATH_FOLLOWING;
       SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
-      reachedFinalPoint = intakeIO.everRanForward && !intakeIO.currentlyRunning;
     }
 
     assertTrue(reachedFinalPoint, "path must finish before testing the aim timeout");
@@ -198,6 +201,7 @@ class AutoFactorySimulationTest {
     assertFalse(fullShoot.isScheduled());
     assertEquals(1, shooterIO.startCount, "new auto must force exactly one shot after ten seconds");
     assertTrue(feederIO.everFed);
+    assertFalse(intakeIO.everRanForward);
     assertFalse(intakeIO.currentlyRunning);
   }
 

@@ -270,8 +270,9 @@ public final class AutoFactory {
                   Logger.recordOutput(
                       FULL_SHOOT_LOG_PREFIX + "/ActivePathPoints",
                       transformedPath.getTranslations().toArray(Translation2d[]::new));
+                  // Deliberately keep Intake disabled while following this Auto path.
                   superStructure.setIntakeRequested(false);
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", true);
+                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
                 },
                 superStructure),
             followPath,
