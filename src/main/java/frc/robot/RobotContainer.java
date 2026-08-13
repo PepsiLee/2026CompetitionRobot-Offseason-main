@@ -169,6 +169,8 @@ public class RobotContainer {
     autoChooser.addOption("BLine Shoot (Alliance Flip)", AutoMode.BLINE_SHOOT);
     autoChooser.addOption(
         "BLine Full Collect + Shoot (Alliance Flip)", AutoMode.BLINE_FULL_SHOOT);
+    autoChooser.addOption(
+        "BLine Far To Ball + Shoot (Alliance Flip)", AutoMode.BLINE_FAR_TO_BALL_SHOOT);
     SmartDashboard.putData("Auto/Mode", autoChooser);
   }
 

@@ -23,7 +23,9 @@ public final class AutoFactory {
   private static final String SHOOT_SECONDS_KEY = "Auto/ShootSeconds";
   private static final String SHOOT_PATH_NAME = "shoot";
   private static final String FULL_SHOOT_PATH_NAME = "full-shoot";
+  private static final String FAR_TO_BALL_PATH_NAME = "fartobal";
   private static final String FULL_SHOOT_LOG_PREFIX = "Auto/BLine/FullShoot";
+  private static final String FAR_TO_BALL_LOG_PREFIX = "Auto/BLine/FarToBallShoot";
   private static final double DEFAULT_SHOOT_SECONDS = 3.0;
   private static final double AIM_TIMEOUT_SECONDS = 3.0;
   private static final double FULL_SHOOT_AIM_TIMEOUT_SECONDS = 10.0;
@@ -37,6 +39,8 @@ public final class AutoFactory {
   private final String shootPathLoadError;
   private final Path fullShootPath;
   private final String fullShootPathLoadError;
+  private final Path farToBallPath;
+  private final String farToBallPathLoadError;
 
   public AutoFactory(Drive drive, SuperStructure superStructure) {
     this(
@@ -44,7 +48,8 @@ public final class AutoFactory {
         superStructure,
         () -> SmartDashboard.getNumber(SHOOT_SECONDS_KEY, DEFAULT_SHOOT_SECONDS),
         SHOOT_PATH_NAME,
-        FULL_SHOOT_PATH_NAME);
+        FULL_SHOOT_PATH_NAME,
+        FAR_TO_BALL_PATH_NAME);
   }
 
   AutoFactory(
@@ -56,7 +61,8 @@ public final class AutoFactory {
         superStructure,
         shootSecondsSupplier,
         SHOOT_PATH_NAME,
-        FULL_SHOOT_PATH_NAME);
+        FULL_SHOOT_PATH_NAME,
+        FAR_TO_BALL_PATH_NAME);
   }
 
   AutoFactory(
@@ -65,6 +71,22 @@ public final class AutoFactory {
       DoubleSupplier shootSecondsSupplier,
       String shootPathName,
       String fullShootPathName) {
+    this(
+        drive,
+        superStructure,
+        shootSecondsSupplier,
+        shootPathName,
+        fullShootPathName,
+        FAR_TO_BALL_PATH_NAME);
+  }
+
+  AutoFactory(
+      Drive drive,
+      SuperStructure superStructure,
+      DoubleSupplier shootSecondsSupplier,
+      String shootPathName,
+      String fullShootPathName,
+      String farToBallPathName) {
     this.drive = drive;
     this.superStructure = superStructure;
     this.shootSecondsSupplier = shootSecondsSupplier;
@@ -101,6 +123,19 @@ public final class AutoFactory {
           FULL_SHOOT_LOG_PREFIX + "/BluePathPoints",
           fullShootPath.getTranslations().toArray(Translation2d[]::new));
     }
+
+    LoadedPath loadedFarToBallPath = loadPath(farToBallPathName);
+    farToBallPath = loadedFarToBallPath.path();
+    farToBallPathLoadError = loadedFarToBallPath.error();
+    Logger.recordOutput(FAR_TO_BALL_LOG_PREFIX + "/PathLoaded", farToBallPath != null);
+    Logger.recordOutput(FAR_TO_BALL_LOG_PREFIX + "/PathLoadError", farToBallPathLoadError);
+    Logger.recordOutput(FAR_TO_BALL_LOG_PREFIX + "/IntakeActive", false);
+    Logger.recordOutput(FAR_TO_BALL_LOG_PREFIX + "/ReachedFinalPoint", false);
+    if (farToBallPath != null) {
+      Logger.recordOutput(
+          FAR_TO_BALL_LOG_PREFIX + "/BluePathPoints",
+          farToBallPath.getTranslations().toArray(Translation2d[]::new));
+    }
   }
 
   private static LoadedPath loadPath(String pathName) {
@@ -125,6 +160,7 @@ public final class AutoFactory {
       case STOP_AT_FULL_SHOOT_START -> createStopAtFullShootStart(alliance);
       case BLINE_SHOOT -> createBLineShoot(alliance);
       case BLINE_FULL_SHOOT -> createFullBLineShoot(alliance);
+      case BLINE_FAR_TO_BALL_SHOOT -> createFarToBallBLineShoot(alliance);
     };
   }
 
@@ -246,34 +282,67 @@ public final class AutoFactory {
   }
 
   private AutoRoutine createFullBLineShoot(Alliance alliance) {
-    if (fullShootPath == null) {
+    return createLongBLineShoot(
+        alliance,
+        fullShootPath,
+        fullShootPathLoadError,
+        FULL_SHOOT_LOG_PREFIX,
+        AutoMode.BLINE_FULL_SHOOT,
+        "BLine Full Shoot",
+        "BLine Full Final Point");
+  }
+
+  private AutoRoutine createFarToBallBLineShoot(Alliance alliance) {
+    return createLongBLineShoot(
+        alliance,
+        farToBallPath,
+        farToBallPathLoadError,
+        FAR_TO_BALL_LOG_PREFIX,
+        AutoMode.BLINE_FAR_TO_BALL_SHOOT,
+        "BLine Far To Ball Shoot",
+        "BLine Far To Ball Final Point");
+  }
+
+  /**
+   * 共用 Full Shoot 的完整流程，確保新增路徑與原本 Auto 使用完全相同的安全停止、
+   * alliance flip、Intake 關閉、終點瞄準與射擊邏輯。
+   */
+  private AutoRoutine createLongBLineShoot(
+      Alliance alliance,
+      Path sourcePath,
+      String pathLoadError,
+      String logPrefix,
+      AutoMode mode,
+      String errorName,
+      String finalShotName) {
+    if (sourcePath == null) {
       Command safeFailure = Commands.runOnce(
               () -> {
                 // false 表示錯誤訊息不附加 Java stack trace。
-                DriverStation.reportError(fullShootPathLoadError, false);
+                DriverStation.reportError(pathLoadError, false);
                 // 真正的機構 request：false 表示不要求 Intake 收球。
                 superStructure.setIntakeRequested(false);
                 cleanupAutoState();
                 // 以下 false 只重設 Elastic 顯示，不會控制硬體。
-                Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
-                Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
+                Logger.recordOutput(logPrefix + "/IntakeActive", false);
+                Logger.recordOutput(logPrefix + "/ReachedFinalPoint", false);
               },
               drive,
               superStructure)
-          .withName("BLine Full Shoot - Path Error");
+          .withName(errorName + " - Path Error");
       return new AutoRoutine(Pose2d.kZero, safeFailure);
     }
 
     // Red 為 true，執行場地中心 180 度 alliance flip；Blue 為 false，使用原路徑。
     boolean shouldFlip = alliance == Alliance.Red;
-    Path transformedPath = fullShootPath.copy();
+    Path transformedPath = sourcePath.copy();
     if (shouldFlip) {
       transformedPath.flip();
     }
     Pose2d startingPose = transformedPath.getStartPose();
 
     // FollowPath mutates the path when alliance flipping, so every routine gets a fresh copy.
-    Path followerPath = fullShootPath.copy();
+    Path followerPath = sourcePath.copy();
     Command followPath = new FollowPath.Builder(
             drive,
             drive::getPose,
@@ -292,21 +361,21 @@ public final class AutoFactory {
             resetForAuto(startingPose, alliance),
             Commands.runOnce(
                 () -> {
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/Alliance", alliance.name());
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ShouldFlip", shouldFlip);
+                  Logger.recordOutput(logPrefix + "/Alliance", alliance.name());
+                  Logger.recordOutput(logPrefix + "/ShouldFlip", shouldFlip);
                   // Logger 的 false 只表示 Elastic 顯示「沒有 mirror」，不控制路徑。
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ShouldMirror", false);
+                  Logger.recordOutput(logPrefix + "/ShouldMirror", false);
                   // 尚未走完路徑，先在 Elastic 顯示 false。
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/StartingPose", startingPose);
+                  Logger.recordOutput(logPrefix + "/ReachedFinalPoint", false);
+                  Logger.recordOutput(logPrefix + "/StartingPose", startingPose);
                   Logger.recordOutput(
-                      FULL_SHOOT_LOG_PREFIX + "/ActivePathPoints",
+                      logPrefix + "/ActivePathPoints",
                       transformedPath.getTranslations().toArray(Translation2d[]::new));
                   // Deliberately keep Intake disabled while following this Auto path.
                   // 真正的機構 request：false 表示走路徑期間不要求 Intake 收球。
                   superStructure.setIntakeRequested(false);
                   // 這個 false 只是讓 Elastic 顯示 Intake 未啟動。
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
+                  Logger.recordOutput(logPrefix + "/IntakeActive", false);
                 },
                 superStructure),
             followPath,
@@ -317,28 +386,28 @@ public final class AutoFactory {
                   // 到終點後仍不要求 Intake 收球。
                   superStructure.setIntakeRequested(false);
                   // 第一個 false 是 Intake 顯示；true 表示已抵達路徑終點。
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
-                  Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", true);
+                  Logger.recordOutput(logPrefix + "/IntakeActive", false);
+                  Logger.recordOutput(logPrefix + "/ReachedFinalPoint", true);
                 },
                 drive,
                 superStructure),
             shootForConfiguredDuration(
-                "BLine Full Final Point",
+                finalShotName,
                 FULL_SHOOT_AIM_TIMEOUT_SECONDS,
-                FULL_SHOOT_LOG_PREFIX),
+                logPrefix),
             stopAll())
         .finallyDo(
             interrupted -> {
               // 不論正常完成或中途取消，都關閉 Intake request。
               superStructure.setIntakeRequested(false);
-              cleanupAutoState(FULL_SHOOT_LOG_PREFIX);
+              cleanupAutoState(logPrefix);
               // interrupted=true 表示 Command 被取消；false 表示正常完成。
               Logger.recordOutput("Auto/Interrupted", interrupted);
               // 以下 false 只把 Elastic 狀態恢復成未啟動／未抵達。
-              Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
-              Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
+              Logger.recordOutput(logPrefix + "/IntakeActive", false);
+              Logger.recordOutput(logPrefix + "/ReachedFinalPoint", false);
             })
-        .withName(AutoMode.BLINE_FULL_SHOOT.name());
+        .withName(mode.name());
     return new AutoRoutine(startingPose, routine);
   }
 

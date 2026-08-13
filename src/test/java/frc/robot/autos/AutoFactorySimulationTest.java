@@ -156,6 +156,29 @@ class AutoFactorySimulationTest {
   }
 
   @Test
+  void farToBallAutoUsesFullShootLogic() {
+    Command farToBall = autoFactory
+        .create(AutoMode.BLINE_FAR_TO_BALL_SHOOT, Alliance.Blue)
+        .command();
+    CommandScheduler.getInstance().schedule(farToBall);
+
+    for (int i = 0; i < 2500 && farToBall.isScheduled(); i++) {
+      CommandScheduler.getInstance().run();
+      if (drive.getControlMode() == Drive.ControlMode.PATH_FOLLOWING) {
+        assertFalse(feederIO.everFed, "feeder must remain stopped while following the path");
+      }
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+    }
+
+    assertFalse(farToBall.isScheduled());
+    assertFalse(intakeIO.everRanForward);
+    assertFalse(intakeIO.currentlyRunning);
+    assertTrue(driveIO.maximumTranslationSpeed > 0.0);
+    assertEquals(1, shooterIO.startCount);
+    assertTrue(feederIO.everFed);
+  }
+
+  @Test
   void fullBLineAutoUsesItsTenSecondForcedShotTimeout() {
     Command fullShoot = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue).command();
     CommandScheduler.getInstance().schedule(fullShoot);
