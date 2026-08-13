@@ -19,22 +19,22 @@ class FullShootPathTest {
 
     assertTrue(path.isValid());
     List<Translation2d> translations = path.getTranslations();
-    assertEquals(8, translations.size());
+    assertEquals(9, translations.size());
     assertTranslationEquals(new Translation2d(4.45653, 7.64792), translations.get(0));
-    assertTranslationEquals(new Translation2d(1.51273, 5.47455), translations.get(7));
+    assertTranslationEquals(new Translation2d(2.16816, 5.43168), translations.get(8));
     assertEquals(-1.5708, path.getStartPose().getRotation().getRadians(), EPSILON);
     assertEquals(4.65, path.getDefaultGlobalConstraints().getMaxVelocityMetersPerSec(), EPSILON);
 
     List<Path.RangedConstraint> velocityConstraints = path.getPathConstraints()
         .getMaxVelocityMetersPerSec()
         .orElseThrow();
-    assertEquals(6, velocityConstraints.size());
+    assertEquals(7, velocityConstraints.size());
     assertEquals(4.5, velocityConstraints.get(0).value(), EPSILON);
     assertEquals(0, velocityConstraints.get(0).startOrdinal());
     assertEquals(0, velocityConstraints.get(0).endOrdinal());
     assertEquals(0.65, velocityConstraints.get(5).value(), EPSILON);
-    assertEquals(7, velocityConstraints.get(5).startOrdinal());
-    assertEquals(7, velocityConstraints.get(5).endOrdinal());
+    assertEquals(8, velocityConstraints.get(5).startOrdinal());
+    assertEquals(8, velocityConstraints.get(5).endOrdinal());
   }
 
   @Test

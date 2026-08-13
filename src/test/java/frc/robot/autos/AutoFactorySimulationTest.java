@@ -108,6 +108,33 @@ class AutoFactorySimulationTest {
   }
 
   @Test
+  void stopAtFullShootStartUsesAlliancePoseAndRunsNoMechanism() {
+    AutoRoutine blueStop =
+        autoFactory.create(AutoMode.STOP_AT_FULL_SHOOT_START, Alliance.Blue);
+    AutoRoutine blueFull = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue);
+    AutoRoutine redStop =
+        autoFactory.create(AutoMode.STOP_AT_FULL_SHOOT_START, Alliance.Red);
+    AutoRoutine redFull = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Red);
+
+    assertEquals(blueFull.startingPose(), blueStop.startingPose());
+    assertEquals(redFull.startingPose(), redStop.startingPose());
+
+    Command stop = blueStop.command();
+    CommandScheduler.getInstance().schedule(stop);
+    for (int i = 0; i < 5 && stop.isScheduled(); i++) {
+      CommandScheduler.getInstance().run();
+      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
+    }
+
+    assertFalse(stop.isScheduled());
+    assertEquals(blueStop.startingPose(), drive.getPose());
+    assertEquals(0.0, driveIO.maximumTranslationSpeed, 1.0e-9);
+    assertEquals(0, shooterIO.startCount);
+    assertFalse(feederIO.everFed);
+    assertFalse(intakeIO.everRanForward);
+  }
+
+  @Test
   void shootOnlyAimsFiresOnceAndNeverTranslates() {
     Command shootOnly = autoFactory.create(AutoMode.SHOOT_ONLY, Alliance.Blue).command();
     CommandScheduler.getInstance().schedule(shootOnly);
@@ -152,7 +179,7 @@ class AutoFactorySimulationTest {
     Command fullShoot = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue).command();
     CommandScheduler.getInstance().schedule(fullShoot);
 
-    for (int i = 0; i < 1500 && fullShoot.isScheduled(); i++) {
+    for (int i = 0; i < 2500 && fullShoot.isScheduled(); i++) {
       CommandScheduler.getInstance().run();
       if (drive.getControlMode() == Drive.ControlMode.PATH_FOLLOWING) {
         assertFalse(feederIO.everFed, "feeder must remain stopped while following the path");
@@ -175,7 +202,7 @@ class AutoFactorySimulationTest {
 
     boolean reachedFinalPoint = false;
     boolean pathStarted = false;
-    for (int i = 0; i < 1000 && fullShoot.isScheduled() && !reachedFinalPoint; i++) {
+    for (int i = 0; i < 2000 && fullShoot.isScheduled() && !reachedFinalPoint; i++) {
       CommandScheduler.getInstance().run();
       pathStarted |= drive.getControlMode() == Drive.ControlMode.PATH_FOLLOWING;
       reachedFinalPoint =

@@ -119,6 +119,7 @@ public final class AutoFactory {
   public AutoRoutine create(AutoMode mode, Alliance alliance) {
     return switch (mode) {
       case DO_NOTHING -> createDoNothing();
+      case STOP_AT_FULL_SHOOT_START -> createStopAtFullShootStart(alliance);
       case SHOOT_ONLY -> createShootOnly(alliance);
       case BLINE_SHOOT -> createBLineShoot(alliance);
       case BLINE_FULL_SHOOT -> createFullBLineShoot(alliance);
@@ -135,6 +136,37 @@ public final class AutoFactory {
                 superStructure)
             .withName("Do Nothing");
     return new AutoRoutine(Pose2d.kZero, routine);
+  }
+
+  private AutoRoutine createStopAtFullShootStart(Alliance alliance) {
+    if (fullShootPath == null) {
+      Command safeFailure = Commands.runOnce(
+              () -> {
+                DriverStation.reportError(fullShootPathLoadError, false);
+                cleanupAutoState();
+              },
+              drive,
+              superStructure)
+          .withName("Stop at Full Shoot Start - Path Error");
+      return new AutoRoutine(Pose2d.kZero, safeFailure);
+    }
+
+    Path transformedPath = fullShootPath.copy();
+    if (alliance == Alliance.Red) {
+      transformedPath.flip();
+    }
+    Pose2d startingPose = transformedPath.getStartPose();
+
+    Command routine = Commands.sequence(
+            resetForAuto(startingPose, alliance),
+            stopAll())
+        .finallyDo(
+            interrupted -> {
+              cleanupAutoState();
+              Logger.recordOutput("Auto/StopAtFullShootStart/Interrupted", interrupted);
+            })
+        .withName(AutoMode.STOP_AT_FULL_SHOOT_START.name());
+    return new AutoRoutine(startingPose, routine);
   }
 
   private AutoRoutine createShootOnly(Alliance alliance) {

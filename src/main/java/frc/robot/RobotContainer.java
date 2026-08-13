@@ -35,6 +35,11 @@ import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIOLimelightHelper;
 
 public class RobotContainer {
+  // 搖桿功能模式：
+  // true  = 只開放底盤移動與底盤方向重設，其他機構按鍵全部停用。
+  // false = 開放目前設定的 Intake、瞄準射擊、直接射擊等所有搖桿按鍵。
+  private static final boolean DRIVE_ONLY_MODE = false;
+
   private final RobotConfiguration configuration = RobotConfiguration.competitionRobot();
   private final RobotState robotState = new RobotState();
   private final SimulatedRobotState simulatedRobotState = RobotBase.isSimulation() ? new SimulatedRobotState(this)
@@ -89,11 +94,12 @@ public class RobotContainer {
 
   }
 
-  private void configureBindings() {
+   private void configureBindings() {
 // 自動註解
     // RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
     // .onTrue(intake.deployIntake());
 
+    // 左搖桿控制底盤平移，右搖桿控制底盤旋轉；兩種模式都保留。
     drive.setDefaultCommand(
         drive.run(
             () -> drive.acceptTeleopInput(
@@ -102,31 +108,50 @@ public class RobotContainer {
                 -driverController.getRightX()))
             .withName("Drive Field Relative"));
 
+    // PS5 Create 鍵依目前 Alliance 重設底盤方向；這仍屬於底盤控制。
     driverController
         .create()
         .onTrue(Commands.runOnce(drive::resetHeadingForAlliance).ignoringDisable(true));
 
-    // Intake and deploy Pivot
+    // 只操作底盤時，不建立下面任何機構按鍵綁定。
+    if (DRIVE_ONLY_MODE) {
+      return;
+    }
+
+    // Circle：按住啟動 Intake，放開後停止 Intake request。
     driverController
         .circle()
         .and(DriverStation::isTeleopEnabled)
         .onTrue(Commands.runOnce(() -> superStructure.setIntakeRequested(true)))
         .onFalse(Commands.runOnce(() -> superStructure.setIntakeRequested(false)));
 
-    // Aim and Shoot
+    // Triangle：按住自動瞄準並射擊，放開後停止射擊 request。
     driverController
         .triangle()
         .and(DriverStation::isTeleopEnabled)
         .onTrue(Commands.runOnce(() -> superStructure.setShootRequested(true)))
         .onFalse(Commands.runOnce(() -> superStructure.setShootRequested(false)));
 
-    // Direct Shoot
+    // Square：按住直接射擊，放開後停止直接射擊 request。
     driverController
         .square()
         .and(DriverStation::isTeleopEnabled)
         .onTrue(Commands.runOnce(() -> superStructure.setDirectShootRequested(true)))
         .onFalse(Commands.runOnce(() -> superStructure.setDirectShootRequested(false)));
 
+    // R2：每按一次增加 100 RPM，只在 Teleop 生效。
+    driverController
+        .R2()
+        .and(DriverStation::isTeleopEnabled)
+        .onTrue(Commands.runOnce(superStructure::increaseTeleopRpmAdjustment));
+
+    // L2：每按一次減少 100 RPM，只在 Teleop 生效。
+    driverController
+        .L2()
+        .and(DriverStation::isTeleopEnabled)
+        .onTrue(Commands.runOnce(superStructure::decreaseTeleopRpmAdjustment));
+
+    // 模擬模式按住 Triangle 時，建立模擬射出的球。
     if (RobotBase.isSimulation()) {
       driverController
           .triangle()
@@ -139,6 +164,8 @@ public class RobotContainer {
 
   private void configureAutoChooser() {
     autoChooser.setDefaultOption("Do Nothing", AutoMode.DO_NOTHING);
+    autoChooser.addOption(
+        "Stop at Full Shoot Start (Alliance Flip)", AutoMode.STOP_AT_FULL_SHOOT_START);
     autoChooser.addOption("Shoot Only", AutoMode.SHOOT_ONLY);
     autoChooser.addOption("BLine Shoot (Alliance Flip)", AutoMode.BLINE_SHOOT);
     autoChooser.addOption(
