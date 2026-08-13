@@ -270,7 +270,7 @@ public final class AutoFactory {
                   Logger.recordOutput(
                       FULL_SHOOT_LOG_PREFIX + "/ActivePathPoints",
                       transformedPath.getTranslations().toArray(Translation2d[]::new));
-                  superStructure.setIntakeRequested(true);
+                  superStructure.setIntakeRequested(false);
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", true);
                 },
                 superStructure),
