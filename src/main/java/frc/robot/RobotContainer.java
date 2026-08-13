@@ -90,9 +90,9 @@ public class RobotContainer {
   }
 
   private void configureBindings() {
-
-    RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
-    .onTrue(intake.deployIntake());
+// 自動註解
+    // RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
+    // .onTrue(intake.deployIntake());
 
     drive.setDefaultCommand(
         drive.run(
@@ -126,17 +126,6 @@ public class RobotContainer {
         .and(DriverStation::isTeleopEnabled)
         .onTrue(Commands.runOnce(() -> superStructure.setDirectShootRequested(true)))
         .onFalse(Commands.runOnce(() -> superStructure.setDirectShootRequested(false)));
-
-    // Teleop shooter tuning: one adjustment per trigger press.
-    driverController
-        .R2()
-        .and(DriverStation::isTeleopEnabled)
-        .onTrue(Commands.runOnce(superStructure::increaseTeleopRpmAdjustment));
-
-    driverController
-        .L2()
-        .and(DriverStation::isTeleopEnabled)
-        .onTrue(Commands.runOnce(superStructure::decreaseTeleopRpmAdjustment));
 
     if (RobotBase.isSimulation()) {
       driverController
