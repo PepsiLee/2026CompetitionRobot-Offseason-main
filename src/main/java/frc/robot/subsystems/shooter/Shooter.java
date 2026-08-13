@@ -1,6 +1,9 @@
 package frc.robot.subsystems.shooter;
 
+import static edu.wpi.first.units.Units.RPM;
+
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants.KrakenX60;
 import frc.robot.config.ShooterConfiguration;
 
 import org.littletonrobotics.junction.Logger;
@@ -13,11 +16,14 @@ public final class Shooter extends SubsystemBase {
 
   private final ShooterIO io;
   private final ShooterIO.Inputs inputs = new ShooterIO.Inputs();
+  private final double maximumMechanismRpm;
   private double rpm = 0;
   private WantedState wantedState = WantedState.OFF;
 
   public Shooter(ShooterIO io, ShooterConfiguration configuration) {
     this.io = io;
+    maximumMechanismRpm =
+        KrakenX60.kFreeSpeed.in(RPM) / Math.abs(configuration.gearRatio());
   }
 
   @Override
@@ -47,6 +53,10 @@ public final class Shooter extends SubsystemBase {
 
   public void setRPM(double rpm){
     this.rpm = rpm;
+  }
+
+  public double getMaximumMechanismRpm() {
+    return maximumMechanismRpm;
   }
 
   public void setWantedState(WantedState state) {

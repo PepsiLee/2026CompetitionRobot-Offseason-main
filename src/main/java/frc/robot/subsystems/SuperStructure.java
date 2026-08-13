@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -7,6 +8,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.RobotState;
 import frc.robot.constants.FieldConstants;
@@ -38,6 +40,8 @@ public final class SuperStructure extends SubsystemBase {
   private static final double AIM_MAX_ANGULAR_SPEED_RADIANS_PER_SECOND = Units.degreesToRadians(15.0);
   private static final double AIM_STABLE_SECONDS = 0.10;
   private static final double SPEED_STABLE_SECONDS = 0.20;
+  private static final double TELEOP_RPM_ADJUSTMENT_STEP = 100.0;
+  private static final double MAX_TELEOP_RPM_ADJUSTMENT = 2000.0;
   // subsystem references
   private final Drive drive;
   private final RobotState robotState;
@@ -58,6 +62,10 @@ public final class SuperStructure extends SubsystemBase {
   private Translation2d autoAimTarget;
   private Translation2d autoDistanceTarget;
   private double autoShotDistanceMeters;
+  private double teleopRpmAdjustment;
+  private double calculatedBaseRpm;
+  private double appliedRpmDifference;
+  private double adjustedTargetRpm;
   private Rotation2d desiredAimHeading = Rotation2d.kZero;
   private Rotation2d lockedShotHeading = Rotation2d.kZero;
   private double lockedShotDistanceMeters;
@@ -80,6 +88,10 @@ public final class SuperStructure extends SubsystemBase {
     autoShotDistanceMeters = robotState.getPose().getTranslation().getDistance(distanceTarget);
     desiredAimHeading = calculateRearShooterHeading(robotState.getPose(), aimTarget);
 
+    // Keep useful RPM values visible even while the shooter is idle. Shooting states
+    // replace this preview with the exact locked/current distance used by the command.
+    calculateAdjustedRpm(autoShotDistanceMeters);
+
     systemState = determineState();
     applyState();
 
@@ -93,7 +105,16 @@ public final class SuperStructure extends SubsystemBase {
     Logger.recordOutput("SuperStructure/DesiredAimHeading", desiredAimHeading);
     Logger.recordOutput("SuperStructure/LockedShotHeading", lockedShotHeading);
     Logger.recordOutput("SuperStructure/LockedShotDistanceMeters", lockedShotDistanceMeters);
+    Logger.recordOutput("SuperStructure/ShooterBaseRPM", calculatedBaseRpm);
+    Logger.recordOutput("SuperStructure/TeleopRPMAdjustment", teleopRpmAdjustment);
+    Logger.recordOutput("SuperStructure/AppliedRPMDifference", appliedRpmDifference);
+    Logger.recordOutput("SuperStructure/AdjustedTargetRPM", adjustedTargetRpm);
     Logger.recordOutput("SuperStructure/FaultReason", faultReason);
+
+    SmartDashboard.putNumber("Shooter/Base RPM", calculatedBaseRpm);
+    SmartDashboard.putNumber("Shooter/Teleop RPM Adjustment", teleopRpmAdjustment);
+    SmartDashboard.putNumber("Shooter/Applied RPM Difference", appliedRpmDifference);
+    SmartDashboard.putNumber("Shooter/Adjusted Target RPM", adjustedTargetRpm);
   }
 
   private SystemState determineState() {
@@ -167,7 +188,7 @@ public final class SuperStructure extends SubsystemBase {
         drive.requestAimStationary(desiredAimHeading);
       }
       case SHOOTING -> {
-        shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
+        shooter.setRPM(calculateAdjustedRpm(lockedShotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
         if (speedReadyDebouncer.calculate(shooter.isReady())) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);
@@ -179,7 +200,7 @@ public final class SuperStructure extends SubsystemBase {
       case DIRECT_SHOOTING -> {
         double shotDistanceMeters =
             autoDistanceTarget != null ? autoShotDistanceMeters : lockedShotDistanceMeters;
-        shooter.setRPM(ShooterCalculator.calculateRPM(shotDistanceMeters));
+        shooter.setRPM(calculateAdjustedRpm(shotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
         if (speedReadyDebouncer.calculate(shooter.isReady())) {
           feeder.setWantedState(Feeder.WantedState.FEED_SHOOTER);
@@ -213,6 +234,43 @@ public final class SuperStructure extends SubsystemBase {
 
   public void setDirectShootRequested(boolean requested) {
     directShootRequested = requested;
+  }
+
+  /** Adds one 100 RPM tuning step. The value is only applied while teleop is enabled. */
+  public void increaseTeleopRpmAdjustment() {
+    setTeleopRpmAdjustment(teleopRpmAdjustment + TELEOP_RPM_ADJUSTMENT_STEP);
+  }
+
+  /** Removes one 100 RPM tuning step. The value is only applied while teleop is enabled. */
+  public void decreaseTeleopRpmAdjustment() {
+    setTeleopRpmAdjustment(teleopRpmAdjustment - TELEOP_RPM_ADJUSTMENT_STEP);
+  }
+
+  public double getTeleopRpmAdjustment() {
+    return teleopRpmAdjustment;
+  }
+
+  private void setTeleopRpmAdjustment(double rpmAdjustment) {
+    teleopRpmAdjustment = MathUtil.clamp(
+        rpmAdjustment,
+        -MAX_TELEOP_RPM_ADJUSTMENT,
+        MAX_TELEOP_RPM_ADJUSTMENT);
+  }
+
+  private double calculateAdjustedRpm(double distanceMeters) {
+    calculatedBaseRpm = ShooterCalculator.calculateRPM(distanceMeters);
+    if (!DriverStation.isTeleopEnabled()) {
+      adjustedTargetRpm = calculatedBaseRpm;
+      appliedRpmDifference = 0.0;
+      return adjustedTargetRpm;
+    }
+
+    adjustedTargetRpm = MathUtil.clamp(
+        calculatedBaseRpm + teleopRpmAdjustment,
+        0.0,
+        Math.max(calculatedBaseRpm, shooter.getMaximumMechanismRpm()));
+    appliedRpmDifference = adjustedTargetRpm - calculatedBaseRpm;
+    return adjustedTargetRpm;
   }
 
   /** Gives an autonomous routine separate heading and shooter-distance targets. */

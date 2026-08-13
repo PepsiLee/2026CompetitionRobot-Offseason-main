@@ -388,6 +388,7 @@ public final class AutoFactory {
     superStructure.stopAll();
     superStructure.clearAutoShotTargets();
     superStructure.setAutoIntakeIdleSuppressed(false);
+    //check need
     drive.stop();
   }
 
