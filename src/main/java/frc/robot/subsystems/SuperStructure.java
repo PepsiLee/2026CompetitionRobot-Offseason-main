@@ -150,6 +150,7 @@ public final class SuperStructure extends SubsystemBase {
         drive.releaseAim();
       }
       case AIMING -> {
+        shooter.setRPM(ShooterCalculator.calculateRPM(lockedShotDistanceMeters));
         shooter.setWantedState(Shooter.WantedState.SHOOTING);
         feeder.setWantedState(Feeder.WantedState.OFF);
         drive.requestAimStationary(desiredAimHeading);

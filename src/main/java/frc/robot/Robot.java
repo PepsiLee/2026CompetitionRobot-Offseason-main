@@ -16,7 +16,6 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import frc.robot.constants.FieldConstants;
 import frc.robot.util.ShooterCalculator;
 
-
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -133,7 +132,7 @@ public class Robot extends LoggedRobot {
     m_robotContainer.getDrive().stop();
 
     SmartDashboard.setDefaultBoolean("Feeder/On", false);
-    SmartDashboard.setDefaultBoolean("Shooter/On", false);    
+    SmartDashboard.setDefaultBoolean("Shooter/On", false);
     SmartDashboard.setDefaultBoolean("Intake/On", false);
 
     SmartDashboard.setDefaultNumber("Feeder/Target Voltage", 0.0);
@@ -148,7 +147,6 @@ public class Robot extends LoggedRobot {
     double targetRPM = SmartDashboard.getNumber("Shooter/Target RPM", 0.0);
     double targetVoltage = SmartDashboard.getNumber("Feeder/Target Voltage", 0.0);
     double intakeTargetVoltage = SmartDashboard.getNumber("Intake/Target Voltage", 0.0);
-
 
     boolean shooter = SmartDashboard.getBoolean("Shooter/On", false);
     boolean feeder = SmartDashboard.getBoolean("Feeder/On", false);

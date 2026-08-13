@@ -2,12 +2,12 @@ package frc.robot.subsystems.shooter;
 
 public interface ShooterIO {
   class Inputs {
-    public boolean[] connected = new boolean[3];
-    public double[] velocityRotationsPerSecond = new double[3];
-    public double[] appliedVolts = new double[3];
-    public double[] supplyCurrentAmps = new double[3];
-    public double[] statorCurrentAmps = new double[3];
-    public double[] temperatureCelsius = new double[3];
+    public boolean[] connected = new boolean[2];
+    public double[] velocityRotationsPerSecond = new double[2];
+    public double[] appliedVolts = new double[2];
+    public double[] supplyCurrentAmps = new double[2];
+    public double[] statorCurrentAmps = new double[2];
+    public double[] temperatureCelsius = new double[2];
   }
 
   default void updateInputs(Inputs inputs) {
