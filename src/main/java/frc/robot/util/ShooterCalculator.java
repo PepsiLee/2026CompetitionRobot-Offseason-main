@@ -39,7 +39,7 @@ public class ShooterCalculator {
         double rpm = (wheelSurfaceVelocity * 60) / wheelCircumference;
 
         // 加上一個摩擦力與動能損耗的補償係數 (視你們的機器狀況微調，預設為 1.0 不變)
-        double tuningFactor = 1.1;
+        double tuningFactor = 1.5                                         ;
 
         return rpm * tuningFactor;
     }

@@ -62,7 +62,7 @@ public final class Intake extends SubsystemBase {
 
       case DEPLOY:
         alwaysOnVolts = 0.0;
-        circleMotorVolts = 5.0;
+        circleMotorVolts = 10.0;//intake開機下去的
         break;
 
       case STOPPED:
