@@ -100,7 +100,7 @@ public final class CompetitionRobotConfig implements RobotConfiguration {
                 // CAN 9 runs at +7 V whenever teleop is enabled. CAN 10 runs at +3 V while
                 // Circle is held
                 // (and while an autonomous intake request is active).
-                intakeConfiguration = new IntakeConfiguration(CAN_BUS, 9, 10, 11, 7.0, 10.0, 40.0, 80.0);
+                intakeConfiguration = new IntakeConfiguration(CAN_BUS, 9, 10, 11, 7.0, 3.0, 40.0, 80.0);
 
                 // All three shooter motors are independent VoltageOut devices; none is
                 // configured as a

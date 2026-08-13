@@ -62,7 +62,7 @@ public final class Intake extends SubsystemBase {
 
       case DEPLOY:
         alwaysOnVolts = 0.0;
-        circleMotorVolts = 10.0;//intake開機下去的
+        circleMotorVolts = 3.0;//intake開機下去的
         break;
 
       case STOPPED:
@@ -101,7 +101,7 @@ public final class Intake extends SubsystemBase {
   public Command deployIntake() {
     return Commands.sequence(
         runOnce(() -> setWantedState(WantedState.DEPLOY)),
-        Commands.waitTime(Seconds.of(0.4)),
+        Commands.waitTime(Seconds.of(1)),//intake deploy s
         runOnce(() -> {
           isDeploy = true;
           setWantedState(WantedState.STOPPED);

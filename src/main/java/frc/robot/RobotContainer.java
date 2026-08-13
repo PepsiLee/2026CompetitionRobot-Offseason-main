@@ -96,8 +96,8 @@ public class RobotContainer {
 
    private void configureBindings() {
 // 自動註解
-    // RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
-    // .onTrue(intake.deployIntake());
+    RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
+    .onTrue(intake.deployIntake());
 
     // 左搖桿控制底盤平移，右搖桿控制底盤旋轉；兩種模式都保留。
     drive.setDefaultCommand(

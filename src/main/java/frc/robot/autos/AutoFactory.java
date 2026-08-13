@@ -78,6 +78,7 @@ public final class AutoFactory {
     LoadedPath loadedShootPath = loadPath(shootPathName);
     shootPath = loadedShootPath.path();
     shootPathLoadError = loadedShootPath.error();
+    // 只供 AdvantageKit／Elastic 顯示：true 表示短路徑載入成功。
     Logger.recordOutput("Auto/BLine/PathLoaded", shootPath != null);
     Logger.recordOutput("Auto/BLine/PathLoadError", shootPathLoadError);
     if (shootPath != null) {
@@ -89,8 +90,10 @@ public final class AutoFactory {
     LoadedPath loadedFullShootPath = loadPath(fullShootPathName);
     fullShootPath = loadedFullShootPath.path();
     fullShootPathLoadError = loadedFullShootPath.error();
+    // 只供 AdvantageKit／Elastic 顯示：true 表示 Full Shoot 路徑載入成功。
     Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/PathLoaded", fullShootPath != null);
     Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/PathLoadError", fullShootPathLoadError);
+    // 以下兩個 false 只是初始化顯示狀態，不會控制 Intake 或底盤。
     Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
     Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
     if (fullShootPath != null) {
@@ -142,6 +145,7 @@ public final class AutoFactory {
     if (fullShootPath == null) {
       Command safeFailure = Commands.runOnce(
               () -> {
+                // false 表示錯誤訊息不附加 Java stack trace。
                 DriverStation.reportError(fullShootPathLoadError, false);
                 cleanupAutoState();
               },
@@ -190,6 +194,7 @@ public final class AutoFactory {
     if (shootPath == null) {
       Command safeFailure = Commands.runOnce(
               () -> {
+                // false 表示錯誤訊息不附加 Java stack trace。
                 DriverStation.reportError(shootPathLoadError, false);
                 cleanupAutoState();
               },
@@ -199,6 +204,7 @@ public final class AutoFactory {
       return new AutoRoutine(Pose2d.kZero, safeFailure);
     }
 
+    // Red 為 true，執行場地中心 180 度 alliance flip；Blue 為 false，使用原路徑。
     boolean shouldFlip = alliance == Alliance.Red;
     Path transformedPath = shootPath.copy();
     if (shouldFlip) {
@@ -215,6 +221,7 @@ public final class AutoFactory {
             new PIDController(3.0, 0.0, 0.0),
             new PIDController(2.0, 0.0, 0.0))
         .withShouldFlip(() -> shouldFlip)
+        // false 表示不使用同源鏡像；Red 只做上面的 alliance flip。
         .withShouldMirror(() -> false)
         .withPoseReset(drive::resetPose)
         .build(shootPath);
@@ -225,7 +232,9 @@ public final class AutoFactory {
                 () -> {
                   Logger.recordOutput("Auto/BLine/Alliance", alliance.name());
                   Logger.recordOutput("Auto/BLine/ShouldFlip", shouldFlip);
+                  // Logger 的 false 只表示 Elastic 顯示「沒有 mirror」，不控制路徑。
                   Logger.recordOutput("Auto/BLine/ShouldMirror", false);
+                  // 尚未走完路徑，先在 Elastic 顯示 false。
                   Logger.recordOutput("Auto/BLine/ReachedFinalPoint", false);
                   Logger.recordOutput("Auto/BLine/StartingPose", startingPose);
                   Logger.recordOutput(
@@ -237,6 +246,7 @@ public final class AutoFactory {
                 () -> {
                   drive.acceptPathSpeeds(new ChassisSpeeds());
                   drive.stop();
+                  // 路徑完成後只把 Elastic 的終點狀態標成 true。
                   Logger.recordOutput("Auto/BLine/ReachedFinalPoint", true);
                 },
                 drive),
@@ -246,6 +256,7 @@ public final class AutoFactory {
             interrupted -> {
               cleanupAutoState();
               Logger.recordOutput("Auto/Interrupted", interrupted);
+              // Auto 結束或中斷後重設顯示，false 只影響 Logger。
               Logger.recordOutput("Auto/BLine/ReachedFinalPoint", false);
             })
         .withName(AutoMode.BLINE_SHOOT.name());
@@ -256,9 +267,12 @@ public final class AutoFactory {
     if (fullShootPath == null) {
       Command safeFailure = Commands.runOnce(
               () -> {
+                // false 表示錯誤訊息不附加 Java stack trace。
                 DriverStation.reportError(fullShootPathLoadError, false);
+                // 真正的機構 request：false 表示不要求 Intake 收球。
                 superStructure.setIntakeRequested(false);
                 cleanupAutoState();
+                // 以下 false 只重設 Elastic 顯示，不會控制硬體。
                 Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
                 Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
               },
@@ -268,6 +282,7 @@ public final class AutoFactory {
       return new AutoRoutine(Pose2d.kZero, safeFailure);
     }
 
+    // Red 為 true，執行場地中心 180 度 alliance flip；Blue 為 false，使用原路徑。
     boolean shouldFlip = alliance == Alliance.Red;
     Path transformedPath = fullShootPath.copy();
     if (shouldFlip) {
@@ -286,6 +301,7 @@ public final class AutoFactory {
             new PIDController(3.0, 0.0, 0.0),
             new PIDController(2.0, 0.0, 0.0))
         .withShouldFlip(() -> shouldFlip)
+        // false 表示不使用同源鏡像；Red 只做上面的 alliance flip。
         .withShouldMirror(() -> false)
         .withPoseReset(drive::resetPose)
         .build(followerPath);
@@ -296,14 +312,18 @@ public final class AutoFactory {
                 () -> {
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/Alliance", alliance.name());
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ShouldFlip", shouldFlip);
+                  // Logger 的 false 只表示 Elastic 顯示「沒有 mirror」，不控制路徑。
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ShouldMirror", false);
+                  // 尚未走完路徑，先在 Elastic 顯示 false。
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/StartingPose", startingPose);
                   Logger.recordOutput(
                       FULL_SHOOT_LOG_PREFIX + "/ActivePathPoints",
                       transformedPath.getTranslations().toArray(Translation2d[]::new));
                   // Deliberately keep Intake disabled while following this Auto path.
+                  // 真正的機構 request：false 表示走路徑期間不要求 Intake 收球。
                   superStructure.setIntakeRequested(false);
+                  // 這個 false 只是讓 Elastic 顯示 Intake 未啟動。
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
                 },
                 superStructure),
@@ -312,7 +332,9 @@ public final class AutoFactory {
                 () -> {
                   drive.acceptPathSpeeds(new ChassisSpeeds());
                   drive.stop();
+                  // 到終點後仍不要求 Intake 收球。
                   superStructure.setIntakeRequested(false);
+                  // 第一個 false 是 Intake 顯示；true 表示已抵達路徑終點。
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
                   Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", true);
                 },
@@ -325,9 +347,12 @@ public final class AutoFactory {
             stopAll())
         .finallyDo(
             interrupted -> {
+              // 不論正常完成或中途取消，都關閉 Intake request。
               superStructure.setIntakeRequested(false);
               cleanupAutoState(FULL_SHOOT_LOG_PREFIX);
+              // interrupted=true 表示 Command 被取消；false 表示正常完成。
               Logger.recordOutput("Auto/Interrupted", interrupted);
+              // 以下 false 只把 Elastic 狀態恢復成未啟動／未抵達。
               Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/IntakeActive", false);
               Logger.recordOutput(FULL_SHOOT_LOG_PREFIX + "/ReachedFinalPoint", false);
             })
@@ -338,10 +363,12 @@ public final class AutoFactory {
   private Command resetForAuto(Pose2d startingPose, Alliance alliance) {
     return Commands.runOnce(
         () -> {
+          // true 表示在 Auto 中禁止平時的 ONLY_ROLLER，沒有 Intake request 時全部輸出 0 V。
           superStructure.setAutoIntakeIdleSuppressed(true);
           superStructure.setAutoShotTargets(
               shotAimTargetForAlliance(alliance), FieldConstants.hubForAlliance(alliance));
           superStructure.clearStopped();
+          // Auto 初始化時不要求 Intake 收球。
           superStructure.setIntakeRequested(false);
           clearShootRequests();
           drive.resetPose(startingPose);
@@ -372,8 +399,10 @@ public final class AutoFactory {
     return Commands.sequence(
             Commands.runOnce(
                 () -> {
+                  // 先關閉強制射擊，再開啟需要瞄準的正常射擊流程。
                   superStructure.setDirectShootRequested(false);
                   superStructure.setShootRequested(true);
+                  // 以下 false 只初始化 Logger：尚未 timeout，也尚未強制射擊。
                   recordShootLog(logPrefix, "AimTimedOut", false);
                   recordShootLog(logPrefix, "ForcedShot", false);
                 },
@@ -384,12 +413,14 @@ public final class AutoFactory {
             Commands.runOnce(
                 () -> {
                   if (!superStructure.isShooting() && !superStructure.isFaulted()) {
+                    // 瞄準超時：關閉正常瞄準射擊，改開啟 direct shoot。
                     superStructure.setShootRequested(false);
                     superStructure.setDirectShootRequested(true);
                     DriverStation.reportWarning(
                         "Auto: " + name + " did not aim within " + aimTimeoutSeconds
                             + " seconds; forcing shot",
-                        false);
+                        false); // false 表示警告不附加 Java stack trace。
+                    // 以下 true 只記錄 Elastic：已 timeout 並進入強制射擊。
                     recordShootLog(logPrefix, "AimTimedOut", true);
                     recordShootLog(logPrefix, "ForcedShot", true);
                   }
@@ -407,8 +438,10 @@ public final class AutoFactory {
   }
 
   private void clearShootRequests(String logPrefix) {
+    // 真正停止兩種射擊 request。
     superStructure.setShootRequested(false);
     superStructure.setDirectShootRequested(false);
+    // Logger 恢復成沒有強制射擊。
     recordShootLog(logPrefix, "ForcedShot", false);
   }
 
@@ -420,6 +453,7 @@ public final class AutoFactory {
     clearShootRequests(logPrefix);
     superStructure.stopAll();
     superStructure.clearAutoShotTargets();
+    // false 表示取消 Auto 的 idle 抑制，恢復 Teleop 原本的 ONLY_ROLLER 行為。
     superStructure.setAutoIntakeIdleSuppressed(false);
     //check need
     drive.stop();

@@ -91,7 +91,7 @@ public final class IntakeIOReal implements IntakeIO {
     final TalonFXConfiguration configL = new TalonFXConfiguration()
         .withMotorOutput(
             new MotorOutputConfigs()
-                .withInverted(InvertedValue.CounterClockwise_Positive)
+                .withInverted(InvertedValue.Clockwise_Positive)//馬達正方向定義
                 .withNeutralMode(NeutralModeValue.Brake))
         .withCurrentLimits(
             new CurrentLimitsConfigs()
