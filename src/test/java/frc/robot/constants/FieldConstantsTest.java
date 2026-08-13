@@ -12,14 +12,14 @@ class FieldConstantsTest {
   private static final double EPSILON = 1.0e-9;
 
   @Test
-  void blueAllianceKeepsShootOnlyPoseUnchanged() {
+  void blueAllianceKeepsBlueOriginPoseUnchanged() {
     Pose2d source = new Pose2d(2.0, 1.5, Rotation2d.fromDegrees(35.0));
 
     assertEquals(source, FieldConstants.blueToAlliance(source, Alliance.Blue));
   }
 
   @Test
-  void redAllianceRotatesShootOnlyPoseAcrossField() {
+  void redAllianceRotatesBlueOriginPoseAcrossField() {
     Pose2d source = new Pose2d(2.0, 1.5, Rotation2d.fromDegrees(35.0));
 
     Pose2d red = FieldConstants.blueToAlliance(source, Alliance.Red);

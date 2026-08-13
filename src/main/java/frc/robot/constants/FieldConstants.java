@@ -7,7 +7,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 
-/** 2026 field geometry, hubs, and the Shoot Only starting pose. */
+/** 2026 field geometry and alliance hub locations. */
 public final class FieldConstants {
   public static final AprilTagFieldLayout FIELD_LAYOUT = AprilTagFieldLayout
       .loadField(AprilTagFields.k2026RebuiltWelded);
@@ -18,9 +18,6 @@ public final class FieldConstants {
   public static final Translation2d BLUE_HUB = new Translation2d(4.626, 4.035);
   public static final Translation2d RED_HUB = new Translation2d(FIELD_LENGTH_METERS - BLUE_HUB.getX(),
       FIELD_WIDTH_METERS - BLUE_HUB.getY());
-
-  // Must be field-validated before use.
-  public static final Pose2d BLUE_LEFT_START = new Pose2d(4.50, 7.35, Rotation2d.fromDegrees(90.0));
 
   private FieldConstants() {
   }

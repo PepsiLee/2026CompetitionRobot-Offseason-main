@@ -135,46 +135,6 @@ class AutoFactorySimulationTest {
   }
 
   @Test
-  void shootOnlyAimsFiresOnceAndNeverTranslates() {
-    Command shootOnly = autoFactory.create(AutoMode.SHOOT_ONLY, Alliance.Blue).command();
-    CommandScheduler.getInstance().schedule(shootOnly);
-
-    for (int i = 0; i < 300 && shootOnly.isScheduled(); i++) {
-      CommandScheduler.getInstance().run();
-      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
-    }
-
-    assertFalse(shootOnly.isScheduled());
-    assertEquals(1, shooterIO.startCount);
-    assertFalse(intakeIO.everRanForward);
-    assertEquals(0.0, driveIO.maximumTranslationSpeed, 1.0e-9);
-  }
-
-  @Test
-  void shootOnlyForcesShotWhenAimDoesNotFinishWithinThreeSeconds() {
-    driveIO.frozen = true;
-    driveIO.resetHeadingOffsetRadians = Math.PI / 2.0;
-    Command shootOnly = autoFactory.create(AutoMode.SHOOT_ONLY, Alliance.Blue).command();
-    CommandScheduler.getInstance().schedule(shootOnly);
-
-    for (int i = 0; i < 125; i++) {
-      CommandScheduler.getInstance().run();
-      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
-    }
-
-    assertEquals(0, shooterIO.startCount, "shooter must wait during the three-second aim window");
-
-    for (int i = 0; i < 100 && shootOnly.isScheduled(); i++) {
-      CommandScheduler.getInstance().run();
-      SimHooks.stepTiming(LOOP_PERIOD_SECONDS);
-    }
-
-    assertFalse(shootOnly.isScheduled());
-    assertEquals(1, shooterIO.startCount, "auto must force one shot after aim timeout");
-    assertEquals(0.0, driveIO.maximumTranslationSpeed, 1.0e-9);
-  }
-
-  @Test
   void fullBLineAutoKeepsIntakeOffThenAimsAndShoots() {
     Command fullShoot = autoFactory.create(AutoMode.BLINE_FULL_SHOOT, Alliance.Blue).command();
     CommandScheduler.getInstance().schedule(fullShoot);

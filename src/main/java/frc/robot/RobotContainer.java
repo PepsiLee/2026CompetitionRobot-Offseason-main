@@ -166,7 +166,6 @@ public class RobotContainer {
     autoChooser.setDefaultOption("Do Nothing", AutoMode.DO_NOTHING);
     autoChooser.addOption(
         "Stop at Full Shoot Start (Alliance Flip)", AutoMode.STOP_AT_FULL_SHOOT_START);
-    autoChooser.addOption("Shoot Only", AutoMode.SHOOT_ONLY);
     autoChooser.addOption("BLine Shoot (Alliance Flip)", AutoMode.BLINE_SHOOT);
     autoChooser.addOption(
         "BLine Full Collect + Shoot (Alliance Flip)", AutoMode.BLINE_FULL_SHOOT);

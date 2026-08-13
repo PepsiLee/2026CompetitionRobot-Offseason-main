@@ -123,7 +123,6 @@ public final class AutoFactory {
     return switch (mode) {
       case DO_NOTHING -> createDoNothing();
       case STOP_AT_FULL_SHOOT_START -> createStopAtFullShootStart(alliance);
-      case SHOOT_ONLY -> createShootOnly(alliance);
       case BLINE_SHOOT -> createBLineShoot(alliance);
       case BLINE_FULL_SHOOT -> createFullBLineShoot(alliance);
     };
@@ -170,23 +169,6 @@ public final class AutoFactory {
               Logger.recordOutput("Auto/StopAtFullShootStart/Interrupted", interrupted);
             })
         .withName(AutoMode.STOP_AT_FULL_SHOOT_START.name());
-    return new AutoRoutine(startingPose, routine);
-  }
-
-  private AutoRoutine createShootOnly(Alliance alliance) {
-    Pose2d startingPose =
-        FieldConstants.blueToAlliance(FieldConstants.BLUE_LEFT_START, alliance);
-    Command routine =
-        Commands.sequence(
-                resetForAuto(startingPose, alliance),
-                shootForConfiguredDuration("Preload"),
-                stopAll())
-            .finallyDo(
-                interrupted -> {
-                  cleanupAutoState();
-                  Logger.recordOutput("Auto/Interrupted", interrupted);
-                })
-            .withName(AutoMode.SHOOT_ONLY.name());
     return new AutoRoutine(startingPose, routine);
   }
 
