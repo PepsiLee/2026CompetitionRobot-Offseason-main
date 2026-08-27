@@ -35,8 +35,8 @@ public final class Drive extends SubsystemBase {
   }
 
   private static final double JOYSTICK_DEADBAND = 0.10;
-  private static final double TELEOP_TRANSLATION_SCALE = 0.4;
-  private static final double TELEOP_ROTATION_SCALE = 0.2;
+  private static final double TELEOP_TRANSLATION_SCALE = 0.5;
+  private static final double TELEOP_ROTATION_SCALE = 0.3;
   private static final double SETPOINT_STABLE_TIME_SECONDS = 0.10;
   private final RobotState robotState;
   private final DriveIO io;

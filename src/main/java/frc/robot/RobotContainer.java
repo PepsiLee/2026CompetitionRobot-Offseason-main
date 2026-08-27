@@ -38,7 +38,7 @@ public class RobotContainer {
   // 搖桿功能模式：
   // true  = 只開放底盤移動與底盤方向重設，其他機構按鍵全部停用。
   // false = 開放目前設定的 Intake、瞄準射擊、直接射擊等所有搖桿按鍵。
-  private static final boolean DRIVE_ONLY_MODE = false;
+  private static final boolean DRIVE_ONLY_MODE = true;
 
   private final RobotConfiguration configuration = RobotConfiguration.competitionRobot();
   private final RobotState robotState = new RobotState();
@@ -96,8 +96,8 @@ public class RobotContainer {
 
    private void configureBindings() {
 // 自動註解
-    RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
-    .onTrue(intake.deployIntake());
+    // RobotModeTriggers.autonomous().or(RobotModeTriggers.teleop())
+    // .onTrue(intake.deployIntake());
 
     // 左搖桿控制底盤平移，右搖桿控制底盤旋轉；兩種模式都保留。
     drive.setDefaultCommand(

@@ -450,7 +450,7 @@ public final class AutoFactory {
     return Commands.runOnce(
         () -> {
           // true 表示在 Auto 中禁止平時的 ONLY_ROLLER，沒有 Intake request 時全部輸出 0 V。
-          superStructure.setAutoIntakeIdleSuppressed(true);
+          superStructure.setAutoIntakeIdleSuppressed(true);// auto intake 動
           superStructure.setAutoShotTargets(
               shotAimTargetForAlliance(alliance), FieldConstants.hubForAlliance(alliance));
           superStructure.clearStopped();
